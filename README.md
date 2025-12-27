@@ -33,7 +33,7 @@ Track tasks across multiple statuses with drag-and-drop:
 ### ⚙️ Powerful Settings
 ![Settings Panel](screenshot_settings.png)
 - **Dark/Light Mode** - Toggle between themes
-- **Backup System** - Automatic backups every 24 hours
+- **Backup System** - Automatic backups for every 6/12/24/48 Hrs
 - **Retention Policy** - 7/30/60 days backup retention
 
 ### 📦 Export Options
@@ -47,7 +47,7 @@ Track tasks across multiple statuses with drag-and-drop:
 ### 📎 Additional Features
 - **Subtasks** - Track progress with nested subtasks
 - **File Attachments** - Link or copy files to app storage
-- **Keyboard Shortcuts** - `Ctrl+Shift+K` for quick task add
+- **Keyboard Shortcuts** - `Ctrl+N` for quick task add
 - **Groups** - Organize tasks by project or category
 
 ---
@@ -92,7 +92,7 @@ KanbanBoard/
 
 | Shortcut | Action |
 |----------|--------|
-| `Ctrl+Shift+K` | Quick Add Task (Global) |
+| `Ctrl+N` | New Task |
 | `Escape` | Close Modals |
 
 ---
@@ -105,6 +105,13 @@ KanbanBoard/
 
 ### Windows: Defender Warning
 - Click "More Info" → "Run Anyway" (common for unsigned apps)
+
+---
+
+## 🤝 Contributing
+
+Contributions, issues, and feature requests are welcome!  
+Check the [issues page](https://github.com/krishna-dev639/KanbanDesktop/issues).
 
 ---
 
