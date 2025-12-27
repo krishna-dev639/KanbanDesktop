@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kanban Board Desktop - Free Task Manager</title>
+    <meta name="description"
+        content="A lightweight, portable Kanban task management application for Windows and Linux. No installation required.">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --accent-orange: #f59e0b;
+            --accent-green: #10b981;
+            --accent-pink: #ec4899;
+            --bg-light: #f8fafc;
+            --bg-dark: #1e293b;
+            --text-dark: #1e293b;
+            --text-gray: #64748b;
+            --radius: 16px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-light);
+            color: var(--text-dark);
+            line-height: 1.7;
+        }
+
+        /* Navigation */
+        nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 5%;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+
+        .logo {
+            font-size: 1.4rem;
+            font-weight: 800;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .logo-icon {
+            background: linear-gradient(135deg, var(--primary), #a855f7);
+            color: white;
+            padding: 6px 10px;
+            border-radius: 10px;
+            font-size: 1rem;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .nav-links a {
+            text-decoration: none;
+            color: var(--text-dark);
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .nav-links a:hover {
+            background: #f1f5f9;
+        }
+
+        .btn-primary {
+            background: var(--primary) !important;
+            color: white !important;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark) !important;
+        }
+
+        /* Hero */
+        .hero {
+            text-align: center;
+            padding: 100px 20px 60px;
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a855f7 100%);
+            color: white;
+        }
+
+        .hero h1 {
+            font-size: clamp(2.5rem, 5vw, 4rem);
+            font-weight: 800;
+            margin-bottom: 20px;
+            line-height: 1.1;
+        }
+
+        .hero p {
+            font-size: 1.25rem;
+            opacity: 0.9;
+            max-width: 600px;
+            margin: 0 auto 40px;
+        }
+
+        .hero-buttons {
+            display: flex;
+            gap: 16px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn-hero {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 16px 32px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            border-radius: 50px;
+            text-decoration: none;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .btn-white {
+            background: white;
+            color: var(--primary);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        .btn-outline {
+            background: transparent;
+            color: white;
+            border: 2px solid rgba(255, 255, 255, 0.4);
+        }
+
+        .btn-hero:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .platform-note {
+            margin-top: 20px;
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+
+        /* Screenshots Section */
+        .screenshots {
+            padding: 80px 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .screenshots h2 {
+            text-align: center;
+            font-size: 2rem;
+            margin-bottom: 50px;
+        }
+
+        .screenshot-carousel {
+            display: flex;
+            gap: 24px;
+            overflow-x: auto;
+            scroll-snap-type: x mandatory;
+            padding: 20px 0;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .screenshot-carousel::-webkit-scrollbar {
+            height: 8px;
+        }
+
+        .screenshot-carousel::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+
+        .screenshot-item {
+            flex: 0 0 auto;
+            width: 600px;
+            max-width: 85vw;
+            scroll-snap-align: center;
+        }
+
+        .screenshot-item img {
+            width: 100%;
+            border-radius: var(--radius);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.15);
+            border: 4px solid white;
+        }
+
+        .screenshot-item p {
+            text-align: center;
+            margin-top: 16px;
+            font-weight: 600;
+            color: var(--text-gray);
+        }
+
+        /* Features */
+        .features {
+            padding: 80px 20px;
+            background: white;
+        }
+
+        .features h2 {
+            text-align: center;
+            font-size: 2rem;
+            margin-bottom: 50px;
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 30px;
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        .feature-card {
+            background: var(--bg-light);
+            padding: 32px;
+            border-radius: var(--radius);
+            border-left: 4px solid var(--primary);
+            transition: transform 0.2s;
+        }
+
+        .feature-card:nth-child(2) {
+            border-color: var(--accent-orange);
+        }
+
+        .feature-card:nth-child(3) {
+            border-color: var(--accent-green);
+        }
+
+        .feature-card:nth-child(4) {
+            border-color: var(--accent-pink);
+        }
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .feature-card .icon {
+            font-size: 2rem;
+            margin-bottom: 16px;
+        }
+
+        .feature-card h3 {
+            margin-bottom: 12px;
+            font-size: 1.2rem;
+        }
+
+        .feature-card p {
+            color: var(--text-gray);
+        }
+
+        /* Download Section */
+        .download {
+            padding: 100px 20px;
+            background: var(--bg-dark);
+            color: white;
+            text-align: center;
+        }
+
+        .download h2 {
+            font-size: 2.5rem;
+            margin-bottom: 16px;
+        }
+
+        .download p {
+            color: #94a3b8;
+            margin-bottom: 40px;
+            font-size: 1.1rem;
+        }
+
+        .download-cards {
+            display: flex;
+            gap: 24px;
+            justify-content: center;
+            flex-wrap: wrap;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .dl-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 40px;
+            border-radius: var(--radius);
+            min-width: 280px;
+            flex: 1;
+        }
+
+        .dl-card h3 {
+            font-size: 1.5rem;
+            margin-bottom: 8px;
+        }
+
+        .dl-card .version {
+            color: #94a3b8;
+            margin-bottom: 24px;
+        }
+
+        .dl-card .btn-download {
+            display: inline-block;
+            background: white;
+            color: var(--bg-dark);
+            padding: 14px 28px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .dl-card .btn-download:hover {
+            background: var(--primary);
+            color: white;
+        }
+
+        .github-note {
+            margin-top: 40px;
+            color: #94a3b8;
+        }
+
+        .github-note a {
+            color: white;
+        }
+
+        /* Contact */
+        .contact {
+            padding: 80px 20px;
+            background: var(--bg-light);
+        }
+
+        .contact-container {
+            max-width: 550px;
+            margin: 0 auto;
+            background: white;
+            padding: 48px;
+            border-radius: var(--radius);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.05);
+        }
+
+        .contact h2 {
+            text-align: center;
+            margin-bottom: 8px;
+        }
+
+        .contact .subtitle {
+            text-align: center;
+            color: var(--text-gray);
+            margin-bottom: 32px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: var(--text-gray);
+        }
+
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 14px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-family: inherit;
+            transition: border 0.2s;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .btn-submit {
+            width: 100%;
+            padding: 16px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .btn-submit:hover {
+            background: var(--primary-dark);
+        }
+
+        /* Footer */
+        footer {
+            background: #0f172a;
+            color: #94a3b8;
+            text-align: center;
+            padding: 40px 20px;
+        }
+
+        footer a {
+            color: white;
+        }
+    </style>
+</head>
+
+<body>
+
+    <nav>
+        <div class="logo">
+            <img src="logo.png" alt="Kanban Board" style="width:32px;height:32px;border-radius:8px;">
+            Kanban Board
+        </div>
+        <div class="nav-links">
+            <a href="#screenshots">Screenshots</a>
+            <a href="#features">Features</a>
+            <a href="#contact">Feedback</a>
+            <a href="#download" class="btn-primary">Download</a>
+        </div>
+    </nav>
+
+    <section class="hero">
+        <h1>Manage Tasks.<br>One Portable File.</h1>
+        <p>A lightweight, beautiful Kanban board for Windows & Linux. No installation, no cloud — just download and run.
+        </p>
+        <div class="hero-buttons">
+            <a href="#download" class="btn-hero btn-white">⬇️ Download Free</a>
+            <a href="https://github.com/krishna-dev639/KanbanDesktop/releases" target="_blank"
+                class="btn-hero btn-outline">⭐ View on GitHub</a>
+        </div>
+        <p class="platform-note">Version 1.0 • Windows 10/11 & Linux</p>
+    </section>
+
+    <section class="screenshots" id="screenshots">
+        <h2>See It In Action</h2>
+        <div class="screenshot-carousel">
+            <div class="screenshot-item">
+                <img src="screenshot_main.png" alt="Main Kanban Board Interface">
+                <p>📋 Main Board View</p>
+            </div>
+            <div class="screenshot-item">
+                <img src="screenshot_stats.png" alt="Statistics Dashboard">
+                <p>📊 Statistics Dashboard</p>
+            </div>
+            <div class="screenshot-item">
+                <img src="screenshot_settings.png" alt="Settings and Backup">
+                <p>⚙️ Settings & Backup</p>
+            </div>
+            <div class="screenshot-item">
+                <img src="screenshot_export.png" alt="Export Options">
+                <p>📤 Export to ZIP</p>
+            </div>
+            <div class="screenshot-item">
+                <img src="screenshot_csv.png" alt="CSV Export">
+                <p>📑 CSV Reports</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="features" id="features">
+        <h2>Why Kanban Board Desktop?</h2>
+        <div class="feature-grid">
+            <div class="feature-card">
+                <span class="icon">🚀</span>
+                <h3>Truly Portable</h3>
+                <p>No installation required. One file runs on Windows and Linux. Carry it on a USB stick.</p>
+            </div>
+            <div class="feature-card">
+                <span class="icon">📊</span>
+                <h3>Visual Analytics</h3>
+                <p>Built-in statistics dashboard shows task distribution, completion rates, and priority breakdown.</p>
+            </div>
+            <div class="feature-card">
+                <span class="icon">💾</span>
+                <h3>Auto Backup</h3>
+                <p>Automatic backups every 24 hours with configurable retention. Never lose your work.</p>
+            </div>
+            <div class="feature-card">
+                <span class="icon">📦</span>
+                <h3>Full Export</h3>
+                <p>Export to JSON, ZIP (with attachments), or generate detailed CSV reports.</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="download" id="download">
+        <h2>Get Organized Today</h2>
+        <p>Download for Windows or Linux — it's free!</p>
+        <div class="download-cards">
+            <div class="dl-card" style="max-width:400px;">
+                <h3>📦 Download v1.0</h3>
+                <p class="version">Available for Windows & Linux</p>
+                <a href="https://github.com/krishna-dev639/KanbanDesktop/releases/tag/V1.0" target="_blank"
+                    class="btn-download">Go to Downloads</a>
+            </div>
+        </div>
+        <p class="github-note">
+            View source on <a href="https://github.com/krishna-dev639/KanbanDesktop" target="_blank">GitHub</a>
+        </p>
+    </section>
+
+    <section class="contact" id="contact">
+        <div class="contact-container">
+            <h2>Send Feedback</h2>
+            <p class="subtitle">Found a bug? Have a suggestion? Let me know!</p>
+            <form action="https://formspree.io/f/mqekkdnp" method="POST">
+                <div class="form-group">
+                    <label for="email">Your Email</label>
+                    <input type="email" id="email" name="email" placeholder="you@example.com" required>
+                </div>
+                <div class="form-group">
+                    <label for="message">Message</label>
+                    <textarea id="message" name="message" rows="5" placeholder="I love the tool, but..."
+                        required></textarea>
+                </div>
+                <button type="submit" class="btn-submit">Send Feedback</button>
+            </form>
+        </div>
+    </section>
+
+    <footer>
+        <p>© 2025 <strong>Murali Krishna</strong>. All rights reserved.</p>
+        <p style="margin-top:10px">
+            <a href="mailto:nakkamuralikrishna45.2@gmail.com">Contact</a> •
+            <a href="https://github.com/krishna-dev639/KanbanDesktop" target="_blank">GitHub</a>
+        </p>
+    </footer>
+
+</body>
+
+</html>
