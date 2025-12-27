@@ -1,0 +1,3749 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kanban Board</title>
+    <style>
+        :root {
+            --bg-primary: #0f0f23;
+            --bg-secondary: #1a1a2e;
+            --bg-tertiary: #16213e;
+            --bg-card: #1e1e3f;
+            --bg-hover: #252550;
+            --text-primary: #ffffff;
+            --text-secondary: #a0a0c0;
+            --text-muted: #6b6b8d;
+            --accent: #6366f1;
+            --accent-hover: #818cf8;
+            --accent-glow: rgba(99, 102, 241, 0.3);
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --border: rgba(255, 255, 255, 0.08);
+            --shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+            --radius: 12px;
+            --radius-sm: 8px;
+        }
+
+        .light-mode {
+            --bg-primary: #f8fafc;
+            --bg-secondary: #ffffff;
+            --bg-tertiary: #f1f5f9;
+            --bg-card: #ffffff;
+            --bg-hover: #e2e8f0;
+            --text-primary: #1e293b;
+            --text-secondary: #475569;
+            --text-muted: #94a3b8;
+            --border: rgba(0, 0, 0, 0.08);
+            --shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Hide content during initial load and show loading spinner */
+        .app-loading .main-layout,
+        .app-loading .header {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .app-loading::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: #ffffff url('loading.png') center center no-repeat;
+            background-size: 300px auto;
+            z-index: 9999;
+        }
+
+        .app-loading::after {
+            content: '';
+            position: fixed;
+            top: calc(50% + 80px);
+            left: 50%;
+            transform: translateX(-50%);
+            width: 40px;
+            height: 10px;
+            z-index: 10000;
+            background: transparent;
+        }
+
+        .app-loading::after {
+            content: '';
+            position: fixed;
+            top: calc(50% + 80px);
+            left: 50%;
+            transform: translateX(-50%);
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--accent);
+            animation: loadingDots 1.2s ease-in-out infinite;
+            box-shadow: -16px 0 var(--accent), 16px 0 var(--accent);
+            z-index: 10000;
+        }
+
+        @keyframes loadingDots {
+
+            0%,
+            100% {
+                opacity: 1;
+                transform: translateX(-50%) scale(1);
+            }
+
+            50% {
+                opacity: 0.5;
+                transform: translateX(-50%) scale(0.8);
+            }
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--text-muted);
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--text-secondary);
+        }
+
+        /* Header */
+        .header {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+            padding: 12px 24px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex-shrink: 0;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .logo-icon {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, var(--accent), #a855f7);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            color: white;
+            font-size: 18px;
+        }
+
+        .logo-text {
+            font-size: 20px;
+            font-weight: 700;
+        }
+
+        .header-spacer {
+            flex: 1;
+        }
+
+        .search-box {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 8px 14px;
+            width: 280px;
+        }
+
+        .search-box input {
+            background: none;
+            border: none;
+            outline: none;
+            color: var(--text-primary);
+            font-size: 14px;
+            width: 100%;
+        }
+
+        .search-box input::placeholder {
+            color: var(--text-muted);
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 16px;
+            border-radius: var(--radius-sm);
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            border: 1px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: white;
+            border-color: var(--accent);
+        }
+
+        .btn-primary:hover {
+            background: var(--accent-hover);
+            box-shadow: 0 0 20px var(--accent-glow);
+        }
+
+        .btn-secondary {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            border-color: var(--border);
+        }
+
+        .btn-secondary:hover {
+            background: var(--bg-hover);
+        }
+
+        .btn-icon {
+            width: 36px;
+            height: 36px;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            color: var(--text-secondary);
+        }
+
+        .btn-icon:hover {
+            background: var(--bg-hover);
+            color: var(--accent);
+        }
+
+        /* Main Layout */
+        .main-layout {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 240px;
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            padding: 16px;
+        }
+
+        .sidebar-section {
+            margin-bottom: 24px;
+        }
+
+        .sidebar-title {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+            margin-bottom: 12px;
+            padding: 0 8px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 12px;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            margin-bottom: 4px;
+            transition: all 0.15s;
+        }
+
+        .nav-item:hover {
+            background: var(--bg-hover);
+        }
+
+        .nav-item.active {
+            background: var(--accent);
+            color: white;
+        }
+
+        .nav-item-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .nav-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        .nav-count {
+            font-size: 12px;
+            background: var(--bg-tertiary);
+            padding: 2px 8px;
+            border-radius: 10px;
+            color: var(--text-secondary);
+        }
+
+        .nav-item.active .nav-count {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+        }
+
+        .group-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .group-select {
+            flex: 1;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 8px 10px;
+            color: var(--text-primary);
+            font-size: 13px;
+            cursor: pointer;
+        }
+
+        .sidebar-footer {
+            margin-top: auto;
+            padding-top: 16px;
+            border-top: 1px solid var(--border);
+        }
+
+        /* Task List Pane */
+        .task-list-pane {
+            width: 360px;
+            background: var(--bg-tertiary);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .list-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .list-title {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .list-count {
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        .list-toolbar {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            gap: 8px;
+        }
+
+        .sort-btn {
+            font-size: 12px;
+            padding: 6px 10px;
+        }
+
+        .task-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 12px;
+        }
+
+        .task-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 14px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .task-card:hover {
+            border-color: var(--accent);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow);
+        }
+
+        .task-card.active {
+            border-color: var(--accent);
+            background: var(--bg-hover);
+        }
+
+        .task-card.overdue {
+            border-left: 3px solid var(--danger);
+        }
+
+        .task-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 8px;
+        }
+
+        .task-title {
+            font-weight: 600;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+
+        .task-priority {
+            font-size: 10px;
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: 4px;
+            text-transform: uppercase;
+        }
+
+        .priority-high {
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--danger);
+        }
+
+        .priority-medium {
+            background: rgba(245, 158, 11, 0.2);
+            color: var(--warning);
+        }
+
+        .priority-low {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--success);
+        }
+
+        .task-card.bulk-selected {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px var(--primary);
+        }
+
+        .task-meta {
+            display: flex;
+            gap: 12px;
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-top: 10px;
+        }
+
+        .task-meta span {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .task-labels {
+            display: flex;
+            gap: 4px;
+            flex-wrap: wrap;
+            margin-top: 8px;
+        }
+
+        .task-label {
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+        }
+
+        .subtask-progress {
+            height: 3px;
+            background: var(--bg-tertiary);
+            border-radius: 2px;
+            margin-top: 10px;
+            overflow: hidden;
+        }
+
+        .subtask-bar {
+            height: 100%;
+            background: var(--accent);
+            border-radius: 2px;
+            transition: width 0.3s;
+        }
+
+        /* Detail Pane */
+        .detail-pane {
+            flex: 1;
+            background: var(--bg-primary);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .detail-empty {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-muted);
+        }
+
+        .detail-empty-icon {
+            font-size: 48px;
+            opacity: 0.5;
+            margin-bottom: 16px;
+        }
+
+        .detail-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .detail-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px;
+        }
+
+        .detail-section {
+            margin-bottom: 24px;
+        }
+
+        .detail-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+        }
+
+        .detail-input {
+            width: 100%;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 12px;
+            font-size: 14px;
+            color: var(--text-primary);
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .detail-input:focus {
+            border-color: var(--accent);
+        }
+
+        .detail-input.title-input {
+            font-size: 20px;
+            font-weight: 600;
+            padding: 16px;
+        }
+
+        textarea.detail-input {
+            min-height: 120px;
+            resize: vertical;
+            font-family: inherit;
+            line-height: 1.6;
+        }
+
+        .detail-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+        }
+
+        select.detail-input {
+            cursor: pointer;
+        }
+
+        /* Subtasks */
+        .subtasks-list {
+            margin-top: 8px;
+        }
+
+        .subtask-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            margin-bottom: 6px;
+        }
+
+        .subtask-checkbox {
+            width: 18px;
+            height: 18px;
+            accent-color: var(--accent);
+            cursor: pointer;
+        }
+
+        .subtask-text {
+            flex: 1;
+            font-size: 14px;
+        }
+
+        .subtask-text.completed {
+            text-decoration: line-through;
+            color: var(--text-muted);
+        }
+
+        .subtask-delete {
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        .subtask-delete:hover {
+            color: var(--danger);
+        }
+
+        .add-subtask {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .add-subtask input {
+            flex: 1;
+        }
+
+        /* Activity */
+        .activity-list {
+            margin-top: 8px;
+        }
+
+        .activity-item {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 12px;
+            margin-bottom: 8px;
+        }
+
+        .activity-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+        }
+
+        .activity-content {
+            font-size: 14px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+        }
+
+        .activity-delete {
+            color: var(--danger);
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity 0.2s;
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        .activity-item:hover .activity-delete {
+            opacity: 1;
+        }
+
+        .comment-box {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .comment-box textarea {
+            flex: 1;
+            min-height: 60px;
+        }
+
+        /* Attachments */
+        .attachments-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 12px;
+            margin-top: 8px;
+        }
+
+        .attachment-item {
+            position: relative;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 8px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .attachment-item:hover {
+            border-color: var(--accent);
+            transform: translateY(-2px);
+        }
+
+        .attachment-thumb {
+            width: 80px;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 4px;
+            margin-bottom: 6px;
+        }
+
+        .attachment-icon {
+            font-size: 32px;
+            margin-bottom: 6px;
+        }
+
+        .attachment-name {
+            font-size: 11px;
+            color: var(--text-secondary);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .attachment-size {
+            font-size: 10px;
+            color: var(--text-muted);
+        }
+
+        .attachment-linked {
+            position: absolute;
+            top: 4px;
+            left: 4px;
+            font-size: 12px;
+            background: var(--accent);
+            color: white;
+            padding: 1px 4px;
+            border-radius: 3px;
+        }
+
+        .attachment-delete {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            font-size: 14px;
+            color: var(--danger);
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .attachment-item:hover .attachment-delete {
+            opacity: 1;
+        }
+
+        .attachment-upload-area {
+            border: 2px dashed var(--border);
+            border-radius: var(--radius-sm);
+            padding: 20px;
+            text-align: center;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-top: 12px;
+        }
+
+        .attachment-upload-area:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .attachment-upload-area.dragover {
+            border-color: var(--accent);
+            background: var(--bg-hover);
+        }
+
+        /* Image Preview Modal */
+        .preview-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.9);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+
+        .preview-modal.active {
+            display: flex;
+        }
+
+        .preview-modal img {
+            max-width: 90%;
+            max-height: 90%;
+            object-fit: contain;
+            border-radius: var(--radius);
+        }
+
+        .preview-close {
+            position: absolute;
+            top: 20px;
+            right: 30px;
+            font-size: 36px;
+            color: white;
+            cursor: pointer;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background: var(--bg-secondary);
+            border-radius: var(--radius);
+            width: 90%;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-title {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            color: var(--text-muted);
+            cursor: pointer;
+        }
+
+        .modal-close:hover {
+            color: var(--text-primary);
+        }
+
+        .modal-body {
+            padding: 24px;
+            overflow-y: auto;
+            max-height: 60vh;
+        }
+
+        .modal-footer {
+            padding: 16px 24px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 13px;
+            font-weight: 500;
+            margin-bottom: 6px;
+            color: var(--text-secondary);
+        }
+
+        .form-input {
+            width: 100%;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 10px 12px;
+            font-size: 14px;
+            color: var(--text-primary);
+            outline: none;
+        }
+
+        .form-input:focus {
+            border-color: var(--accent);
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        /* Settings Modal */
+        .settings-section {
+            margin-bottom: 20px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .settings-section:last-child {
+            border-bottom: none;
+        }
+
+        .settings-title {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+
+        .setting-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+        }
+
+        .setting-label {
+            font-size: 14px;
+        }
+
+        .setting-desc {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .toggle {
+            width: 44px;
+            height: 24px;
+            background: var(--bg-tertiary);
+            border-radius: 12px;
+            cursor: pointer;
+            position: relative;
+            transition: background 0.2s;
+        }
+
+        .toggle.active {
+            background: var(--accent);
+        }
+
+        .toggle::after {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background: white;
+            border-radius: 50%;
+            top: 2px;
+            left: 2px;
+            transition: left 0.2s;
+        }
+
+        .toggle.active::after {
+            left: 22px;
+        }
+
+        /* Backup List */
+        .backup-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            background: var(--bg-tertiary);
+            border-radius: var(--radius-sm);
+            margin-bottom: 8px;
+        }
+
+        .backup-info {
+            flex: 1;
+        }
+
+        .backup-name {
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .backup-date {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .backup-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            background: var(--text-primary);
+            color: var(--bg-primary);
+            padding: 12px 20px;
+            border-radius: var(--radius-sm);
+            box-shadow: var(--shadow);
+            transform: translateY(100px);
+            transition: transform 0.3s;
+            z-index: 1001;
+        }
+
+        .toast.show {
+            transform: translateY(0);
+        }
+
+        .toast.error {
+            background: var(--danger);
+            color: white;
+        }
+
+        /* Stats Dashboard */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 20px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--accent);
+        }
+
+        .stat-label {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        /* Welcome Banner */
+        .welcome-banner {
+            position: fixed;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(135deg, var(--accent), #8b5cf6);
+            color: white;
+            padding: 16px 24px;
+            border-radius: var(--radius);
+            box-shadow: 0 8px 32px rgba(99, 102, 241, 0.3);
+            z-index: 1002;
+            display: none;
+            align-items: center;
+            gap: 16px;
+            max-width: 500px;
+        }
+
+        .welcome-banner.show {
+            display: flex;
+        }
+
+        .welcome-banner .welcome-content {
+            flex: 1;
+        }
+
+        .welcome-banner .welcome-greeting {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .welcome-banner .welcome-summary {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .welcome-banner .welcome-close {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .welcome-banner .welcome-close:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+    </style>
+</head>
+
+<body class="app-loading">
+    <!-- Header -->
+    <header class="header">
+        <div class="logo">
+            <img src="logo.png" alt="K" class="logo-icon" style="background:none; border:none; padding:0;">
+            <span class="logo-text">Kanban Board</span>
+        </div>
+        <div class="header-spacer"></div>
+        <div class="search-box">
+            <span>🔍</span>
+            <input type="text" id="searchInput" placeholder="Search tasks..." oninput="handleSearch(this.value)">
+        </div>
+        <button class="btn btn-secondary" onclick="openModal('statsModal')">📊 Stats</button>
+        <button class="btn btn-secondary" onclick="openModal('settingsModal')">⚙️ Settings</button>
+        <button class="btn-icon" onclick="showAbout()" title="About">ℹ️</button>
+
+        <button class="btn btn-primary" onclick="openModal('newTaskModal')">+ New Task</button>
+    </header>
+
+    <!-- Main Layout -->
+    <div class="main-layout">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-section">
+                <div class="sidebar-title">Group</div>
+                <div class="group-header">
+                    <select class="group-select" id="groupSelect" onchange="changeGroup(this.value)"></select>
+                    <button class="btn-icon" onclick="createGroup()" title="New Group">+</button>
+                    <button class="btn-icon" onclick="renameGroup()" title="Rename Group">✏️</button>
+                    <button class="btn-icon" onclick="deleteGroup()" title="Delete Group"
+                        style="color:var(--danger)">🗑</button>
+                </div>
+            </div>
+            <div class="sidebar-section">
+                <div class="sidebar-title">Status</div>
+                <div class="nav-item active" data-status="todo" onclick="switchStatus('todo')">
+                    <div class="nav-item-left">
+                        <div class="nav-dot" style="background:#6366f1"></div><span>To Do</span>
+                    </div>
+                    <span class="nav-count" id="count-todo">0</span>
+                </div>
+                <div class="nav-item" data-status="in-progress" onclick="switchStatus('in-progress')">
+                    <div class="nav-item-left">
+                        <div class="nav-dot" style="background:#f59e0b"></div><span>In Progress</span>
+                    </div>
+                    <span class="nav-count" id="count-in-progress">0</span>
+                </div>
+                <div class="nav-item" data-status="waiting" onclick="switchStatus('waiting')">
+                    <div class="nav-item-left">
+                        <div class="nav-dot" style="background:#8b5cf6"></div><span>Waiting for Response</span>
+                    </div>
+                    <span class="nav-count" id="count-waiting">0</span>
+                </div>
+                <div class="nav-item" data-status="done" onclick="switchStatus('done')">
+                    <div class="nav-item-left">
+                        <div class="nav-dot" style="background:#10b981"></div><span>Done</span>
+                    </div>
+                    <span class="nav-count" id="count-done">0</span>
+                </div>
+                <div class="nav-item" data-status="archived" onclick="switchStatus('archived')"
+                    style="margin-top:8px;border-top:1px solid var(--border);padding-top:12px">
+                    <div class="nav-item-left">
+                        <div class="nav-dot" style="background:#6b7280"></div><span>📦 Archived</span>
+                    </div>
+                    <span class="nav-count" id="count-archived">0</span>
+                </div>
+            </div>
+            <div class="sidebar-footer">
+                <button class="btn btn-secondary" style="width:100%;margin-bottom:8px" onclick="handleExport()">📤
+                    Export JSON</button>
+                <button class="btn btn-secondary" style="width:100%;margin-bottom:8px" onclick="handleImport()">📥
+                    Import JSON</button>
+                <button class="btn btn-secondary" style="width:100%" onclick="showCSVExportDialog()">📊 CSV
+                    Report</button>
+            </div>
+        </aside>
+
+        <!-- Task List -->
+        <div class="task-list-pane">
+            <div class="list-header">
+                <span class="list-title" id="listTitle">To Do</span>
+                <span class="list-count" id="listCount">0 tasks</span>
+            </div>
+            <div class="list-toolbar">
+                <button class="btn btn-secondary sort-btn" onclick="sortTasks('priority')">⚡ Priority</button>
+                <button class="btn btn-secondary sort-btn" onclick="sortTasks('date')">📅 Date</button>
+                <button class="btn btn-secondary sort-btn" onclick="sortTasks('title')">🔤 Title</button>
+                <div style="flex:1"></div>
+                <button class="btn btn-secondary" id="bulkSelectBtn" onclick="toggleBulkSelect()"
+                    title="Select Multiple">☑️</button>
+            </div>
+            <div class="list-toolbar" id="bulkActionsBar"
+                style="display:none;background:var(--bg-tertiary);padding:8px 12px;border-radius:8px;margin-bottom:8px;align-items:center;gap:8px">
+                <span id="bulkCount"
+                    style="font-weight:600;color:var(--accent);min-width:24px;text-align:center">0</span>
+                <button class="btn btn-secondary" onclick="bulkSelectAll()" style="padding:4px 8px">All</button>
+                <button class="btn btn-secondary" onclick="bulkMoveStatus()" style="padding:4px 8px">Move</button>
+                <button class="btn btn-secondary" onclick="bulkArchive()" style="padding:4px 8px">Archive</button>
+                <button class="btn btn-secondary" onclick="bulkDelete()"
+                    style="padding:4px 8px;color:var(--danger)">Delete</button>
+                <button class="btn btn-secondary" onclick="toggleBulkSelect()" style="padding:4px 8px">Cancel</button>
+            </div>
+            <div class="task-list" id="taskList"></div>
+        </div>
+
+        <!-- Detail Pane -->
+        <div class="detail-pane" id="detailPane">
+            <div class="detail-empty">
+                <div class="detail-empty-icon">📋</div>
+                <div style="font-size:16px;font-weight:500">Select a task</div>
+                <div style="margin-top:8px">Click on a task to view details</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- New Task Modal -->
+    <div class="modal-overlay" id="newTaskModal">
+        <div class="modal" style="max-width:550px">
+            <div class="modal-header">
+                <span class="modal-title">Create New Task</span>
+                <button class="modal-close" onclick="closeModal('newTaskModal')">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Task Title *</label>
+                    <input type="text" class="form-input" id="newTitle" placeholder="What needs to be done?">
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Group</label>
+                        <select class="form-input" id="newGroup"></select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Priority</label>
+                        <select class="form-input" id="newPriority">
+                            <option value="Medium">Medium</option>
+                            <option value="High">High</option>
+                            <option value="Low">Low</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Due Date</label>
+                        <input type="date" class="form-input" id="newDate">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Assignee</label>
+                        <input type="text" class="form-input" id="newAssignee" placeholder="Who is responsible?">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Email ID (Reference)</label>
+                    <input type="text" class="form-input" id="newEmailId"
+                        placeholder="Email subject or ID for reference">
+                    <div id="emailWarning" style="color:var(--warning);font-size:12px;margin-top:4px;display:none">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Description</label>
+                    <textarea class="form-input" id="newDesc" rows="4" placeholder="Add details..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Subtasks (Optional)</label>
+                    <div id="newSubtasksList" style="margin-bottom:8px"></div>
+                    <div style="display:flex;gap:8px">
+                        <input type="text" class="form-input" id="newSubtaskText" placeholder="Add a subtask..."
+                            style="flex:1"
+                            onkeypress="if(event.key==='Enter'){event.preventDefault();addNewTaskSubtask();}">
+                        <input type="date" class="form-input" id="newSubtaskDate" style="width:140px"
+                            title="Subtask due date (optional)">
+                        <button class="btn btn-secondary" onclick="addNewTaskSubtask()" style="white-space:nowrap">+
+                            Add</button>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('newTaskModal')">Cancel</button>
+                <button class="btn btn-primary" onclick="createTask()">Create Task</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div class="modal-overlay" id="settingsModal">
+        <div class="modal" style="max-width:800px">
+            <div class="modal-header">
+                <span class="modal-title">Settings</span>
+                <button class="modal-close" onclick="closeModal('settingsModal')">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="settings-section">
+                    <div class="settings-title">Appearance</div>
+                    <div class="setting-row">
+                        <div>
+                            <div class="setting-label">Dark Mode</div>
+                            <div class="setting-desc">Use dark theme</div>
+                        </div>
+                        <div class="toggle" id="toggleDarkMode" onclick="toggleSettingDarkMode()"></div>
+                    </div>
+                </div>
+                <div class="settings-section">
+                    <div class="settings-title">Backup</div>
+                    <div class="setting-row">
+                        <div>
+                            <div class="setting-label">Auto Backup</div>
+                            <div class="setting-desc">Automatically backup data</div>
+                        </div>
+                        <div class="toggle active" id="toggleAutoBackup" onclick="toggleSetting('autoBackup')"></div>
+                    </div>
+                    <div class="setting-row">
+                        <div>
+                            <div class="setting-label">Backup Interval</div>
+                            <div class="setting-desc">Hours between backups</div>
+                        </div>
+                        <select class="form-input" style="width:100px" id="backupInterval"
+                            onchange="updateBackupInterval()">
+                            <option value="6">6 hours</option>
+                            <option value="12">12 hours</option>
+                            <option value="24" selected>24 hours</option>
+                            <option value="48">48 hours</option>
+                        </select>
+                    </div>
+                    <div class="setting-row">
+                        <div>
+                            <div class="setting-label">Backup Retention</div>
+                            <div class="setting-desc">Delete backups older than</div>
+                        </div>
+                        <select class="form-input" style="width:120px" id="backupRetention"
+                            onchange="updateBackupRetention()">
+                            <option value="7">7 Days</option>
+                            <option value="30">30 Days</option>
+                            <option value="60">60 Days</option>
+                        </select>
+                    </div>
+                    <div class="setting-row">
+                        <div>
+                            <div class="setting-label">Max Backups</div>
+                            <div class="setting-desc">Keep last N backups</div>
+                        </div>
+                        <select class="form-input" style="width:100px" id="maxBackups" onchange="updateMaxBackups()">
+                            <option value="5">5</option>
+                            <option value="10">10</option>
+                            <option value="20">20</option>
+                            <option value="50">50</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-secondary" style="margin-top:12px" onclick="manualBackup()">📦 Create Backup
+                        Now</button>
+                </div>
+                <div class="settings-section">
+                    <div class="settings-title">Manage Backups</div>
+                    <div id="backupList"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Modal -->
+    <div class="modal-overlay" id="statsModal">
+        <div class="modal" style="max-width:900px">
+            <div class="modal-header">
+                <span class="modal-title">Statistics Dashboard</span>
+                <button class="modal-close" onclick="closeModal('statsModal')">×</button>
+            </div>
+            <div class="modal-body" id="statsContent"></div>
+        </div>
+    </div>
+
+    <!-- CSV Export Modal -->
+    <div class="modal-overlay" id="csvExportModal">
+        <div class="modal" style="max-width:600px">
+            <div class="modal-header">
+                <span class="modal-title">Export CSV Report</span>
+                <button class="modal-close" onclick="closeModal('csvExportModal')">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Date Range</label>
+                    <div class="form-row">
+                        <input type="date" class="form-input" id="csvDateFrom" placeholder="From">
+                        <input type="date" class="form-input" id="csvDateTo" placeholder="To">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Status Filter</label>
+                    <select class="form-input" id="csvStatus">
+                        <option value="all">All Statuses</option>
+                        <option value="todo">To Do</option>
+                        <option value="in-progress">In Progress</option>
+                        <option value="waiting">Waiting</option>
+                        <option value="done">Done</option>
+                    </select>
+                </div>
+                <div style="background:var(--bg-tertiary);padding:12px;border-radius:8px;margin-top:12px">
+                    <div style="font-size:13px;color:var(--text-secondary)">Tasks to export: <strong
+                            id="csvCount">0</strong></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('csvExportModal')">Cancel</button>
+                <button class="btn btn-primary" onclick="exportCSV()">📊 Export CSV</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Dialog Modal (replaces browser prompt/alert/confirm) -->
+    <div class="modal-overlay" id="customDialog">
+        <div class="modal" style="max-width:400px">
+            <div class="modal-header">
+                <span class="modal-title" id="dialogTitle">Dialog</span>
+                <button class="modal-close" onclick="dialogCancel()">×</button>
+            </div>
+            <div class="modal-body">
+                <div id="dialogMessage" style="margin-bottom:16px;color:var(--text-secondary)"></div>
+                <input type="text" class="form-input" id="dialogInput" style="display:none"
+                    placeholder="Enter value...">
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="dialogCancelBtn" onclick="dialogCancel()">Cancel</button>
+                <button class="btn btn-primary" id="dialogOkBtn" onclick="dialogOk()">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast">Action completed</div>
+
+    <!-- Welcome Banner -->
+    <div class="welcome-banner" id="welcomeBanner">
+        <div class="welcome-content">
+            <div class="welcome-greeting" id="welcomeGreeting"></div>
+            <div class="welcome-summary" id="welcomeSummary"></div>
+        </div>
+        <button class="welcome-close" onclick="closeWelcomeBanner()">&times;</button>
+    </div>
+
+    <script>
+        // ============ STATE ============
+        // Check pywebview at runtime since it's injected after page load
+        function isDesktop() { return typeof pywebview !== 'undefined' && pywebview.api; }
+        let tasks = [], groups = ['General'], labels = [];
+        let currentGroup = 'All', currentStatus = 'todo', selectedTaskId = null;
+        let searchQuery = '', sortBy = 'priority';
+        let settings = { theme: 'light', autoBackup: true, backupInterval: 24, maxBackups: 10 };
+
+        // ============ INIT ============
+        // Wait for pywebview to be ready before initializing in desktop mode
+        if (window.pywebview) {
+            // pywebview already available
+            document.addEventListener('DOMContentLoaded', init);
+        } else {
+            // Wait for pywebviewready event (fired when pywebview injects its API)
+            window.addEventListener('pywebviewready', init);
+            // Fallback for browser mode
+            document.addEventListener('DOMContentLoaded', function () {
+                if (!isDesktop()) init();
+            });
+        }
+
+        async function init() {
+            if (isDesktop()) {
+                settings = await pywebview.api.get_all_settings();
+                const data = await pywebview.api.load_data();
+                tasks = data.tasks || [];
+                groups = data.groups || ['General'];
+                labels = data.labels || [];
+            }
+            applyTheme();
+            updateSettingsUI();
+            renderAll();
+            document.body.classList.remove('app-loading');
+            setupKeyboardShortcuts();
+            showWelcomeBanner();
+        }
+
+        function updateSettingsUI() {
+            // Sync backup settings dropdowns with loaded values
+            const backupIntervalEl = document.getElementById('backupInterval');
+            const maxBackupsEl = document.getElementById('maxBackups');
+            const autoBackupEl = document.getElementById('toggleAutoBackup');
+            const darkModeEl = document.getElementById('toggleDarkMode');
+
+            if (backupIntervalEl) backupIntervalEl.value = settings.backupInterval || 24;
+            if (document.getElementById('backupRetention')) document.getElementById('backupRetention').value = settings.backupRetention || 30;
+            if (document.getElementById('maxBackups')) document.getElementById('maxBackups').value = settings.maxBackups || 10;
+            if (autoBackupEl) autoBackupEl.classList.toggle('active', settings.autoBackup !== false);
+            if (darkModeEl) darkModeEl.classList.toggle('active', settings.theme === 'dark');
+        }
+
+        function applyTheme() {
+            const isDark = settings.theme === 'dark';
+            document.body.classList.toggle('light-mode', !isDark);
+            const toggle = document.getElementById('toggleDarkMode');
+            if (toggle) toggle.classList.toggle('active', isDark);
+        }
+
+        function renderAll() {
+            renderGroups();
+            renderNavCounts();
+            renderTaskList();
+            renderDetail();
+        }
+
+        // ============ WELCOME BANNER ============
+        function getGreeting() {
+            const hour = new Date().getHours();
+            const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+
+            if (hour >= 5 && hour < 12) {
+                return pick([
+                    'Good morning',
+                    'Rise and shine',
+                    'Morning',
+                    'Fresh start today',
+                    'Hello, early bird'
+                ]);
+            }
+            if (hour >= 12 && hour < 17) {
+                return pick([
+                    'Good afternoon',
+                    'Hope your day is going well',
+                    'Afternoon',
+                    'Keep up the momentum',
+                    'Hello there'
+                ]);
+            }
+            if (hour >= 17 && hour < 21) {
+                return pick([
+                    'Good evening',
+                    'Evening',
+                    'Wrapping up the day',
+                    'Almost there',
+                    'Hello'
+                ]);
+            }
+            return pick([
+                'Hey there',
+                'Hello, night owl',
+                'Burning the midnight oil',
+                'Still going strong',
+                'Welcome back'
+            ]);
+        }
+
+        function showWelcomeBanner() {
+            const today = new Date().toISOString().split('T')[0];
+            const dueToday = tasks.filter(t => t.targetDate === today && t.status !== 'done' && !t.archived).length;
+            const overdue = tasks.filter(t => t.targetDate && t.targetDate < today && t.status !== 'done' && !t.archived).length;
+
+            const greeting = getGreeting();
+            document.getElementById('welcomeGreeting').textContent = `${greeting}! 👋`;
+
+            let summary = '';
+            if (dueToday > 0 && overdue > 0) {
+                summary = `You have ${dueToday} task${dueToday > 1 ? 's' : ''} due today and ${overdue} overdue task${overdue > 1 ? 's' : ''}.`;
+            } else if (dueToday > 0) {
+                summary = `You have ${dueToday} task${dueToday > 1 ? 's' : ''} due today.`;
+            } else if (overdue > 0) {
+                summary = `You have ${overdue} overdue task${overdue > 1 ? 's' : ''} that need${overdue === 1 ? 's' : ''} attention.`;
+            } else {
+                summary = 'All caught up! No tasks due today or overdue.';
+            }
+
+            document.getElementById('welcomeSummary').textContent = summary;
+            document.getElementById('welcomeBanner').classList.add('show');
+
+            // Auto-hide after 8 seconds
+            setTimeout(closeWelcomeBanner, 8000);
+        }
+
+        function closeWelcomeBanner() {
+            document.getElementById('welcomeBanner').classList.remove('show');
+        }
+
+        // ============ DATA ============
+        async function saveData() {
+            try {
+                if (isDesktop()) {
+                    await pywebview.api.save_data({ tasks, groups, labels });
+                } else {
+                    localStorage.setItem('kanban_data', JSON.stringify({ tasks, groups, labels }));
+                }
+            } catch (e) {
+                console.error('Error saving data:', e);
+            }
+        }
+
+        // ============ GROUPS ============
+        function renderGroups() {
+            const sel = document.getElementById('groupSelect');
+            sel.innerHTML = `<option value="All">All Groups</option>` +
+                groups.map(g => `<option value="${g}" ${g === currentGroup ? 'selected' : ''}>${g}</option>`).join('');
+        }
+
+        function changeGroup(g) {
+            currentGroup = g;
+            selectedTaskId = null;
+            renderAll();
+        }
+
+        function createGroup() {
+            showDialog('Create New Group', 'Enter a name for the new group:', '', (name) => {
+                if (name && name.trim() && !groups.includes(name.trim())) {
+                    groups.push(name.trim());
+                    saveData();
+                    renderGroups();
+                    showToast('Group created');
+                } else if (groups.includes(name.trim())) {
+                    showAlert('Group Exists', 'A group with this name already exists.');
+                }
+            });
+        }
+
+        function deleteGroup() {
+            // Can't delete if viewing "All Groups"
+            if (currentGroup === 'All') {
+                showAlert('Select a Group', 'Please select a specific group to delete. You cannot delete "All Groups".');
+                return;
+            }
+
+            // Can't delete the last group
+            if (groups.length <= 1) {
+                showAlert('Cannot Delete', 'You must have at least one group. Create another group before deleting this one.');
+                return;
+            }
+
+            const groupToDelete = currentGroup;
+            const tasksInGroup = tasks.filter(t => t.group === groupToDelete);
+
+            let message = `Are you sure you want to delete the group "${groupToDelete}"?`;
+            if (tasksInGroup.length > 0) {
+                message += `\n\n⚠️ This group contains ${tasksInGroup.length} task(s). They will be moved to "General".`;
+            }
+
+            showConfirm('Delete Group', message, (confirmed) => {
+                if (confirmed) {
+                    // Move tasks to General
+                    tasks.forEach(t => {
+                        if (t.group === groupToDelete) {
+                            t.group = 'General';
+                        }
+                    });
+
+                    // Remove the group
+                    const idx = groups.indexOf(groupToDelete);
+                    if (idx > -1) {
+                        groups.splice(idx, 1);
+                    }
+
+                    // Ensure "General" exists if we moved tasks there
+                    if (tasksInGroup.length > 0 && !groups.includes('General')) {
+                        groups.unshift('General');
+                    }
+
+                    // Switch to All Groups view
+                    currentGroup = 'All';
+                    selectedTaskId = null;
+                    saveData();
+                    renderAll();
+                    showToast(`Group "${groupToDelete}" deleted${tasksInGroup.length > 0 ? `, ${tasksInGroup.length} tasks moved to General` : ''}`);
+                }
+            });
+        }
+
+        function renameGroup() {
+            if (currentGroup === 'All') {
+                showAlert('Select a Group', 'Please select a specific group to rename.');
+                return;
+            }
+
+            showDialog('Rename Group', `Enter new name for "${currentGroup}":`, currentGroup, (newName) => {
+                if (!newName) return;
+                newName = newName.trim();
+                if (!newName || newName === currentGroup) return;
+
+                if (groups.includes(newName)) {
+                    showAlert('Name Exists', `A group named "${newName}" already exists.`);
+                    return;
+                }
+
+                const oldName = currentGroup;
+
+                // Update all tasks with this group
+                tasks.forEach(t => {
+                    if (t.group === oldName) t.group = newName;
+                });
+
+                // Update groups array
+                const idx = groups.indexOf(oldName);
+                if (idx > -1) groups[idx] = newName;
+
+                currentGroup = newName;
+                saveData();
+                renderAll();
+                showToast(`Group renamed to "${newName}"`);
+            });
+        }
+
+        // ============ CUSTOM DIALOGS ============
+        let dialogCallback = null;
+        let dialogType = 'prompt'; // 'prompt', 'confirm', 'alert'
+
+        function showDialog(title, message, defaultValue, callback) {
+            dialogType = 'prompt';
+            dialogCallback = callback;
+            document.getElementById('dialogTitle').textContent = title;
+            document.getElementById('dialogMessage').textContent = message;
+            const input = document.getElementById('dialogInput');
+            input.style.display = 'block';
+            input.value = defaultValue || '';
+            document.getElementById('dialogCancelBtn').style.display = 'inline-flex';
+            document.getElementById('customDialog').classList.add('active');
+            setTimeout(() => input.focus(), 100);
+        }
+
+        function showConfirm(title, message, callback) {
+            dialogType = 'confirm';
+            dialogCallback = callback;
+            document.getElementById('dialogTitle').textContent = title;
+            document.getElementById('dialogMessage').textContent = message;
+            document.getElementById('dialogInput').style.display = 'none';
+            document.getElementById('dialogCancelBtn').style.display = 'inline-flex';
+            document.getElementById('customDialog').classList.add('active');
+        }
+
+        function showAlert(title, message, callback) {
+            dialogType = 'alert';
+            dialogCallback = callback || (() => { });
+            document.getElementById('dialogTitle').textContent = title;
+            document.getElementById('dialogMessage').textContent = message;
+            document.getElementById('dialogInput').style.display = 'none';
+            document.getElementById('dialogCancelBtn').style.display = 'none';
+            document.getElementById('customDialog').classList.add('active');
+        }
+
+        function dialogOk() {
+            document.getElementById('customDialog').classList.remove('active');
+            if (dialogCallback) {
+                if (dialogType === 'prompt') {
+                    dialogCallback(document.getElementById('dialogInput').value);
+                } else {
+                    dialogCallback(true);
+                }
+            }
+            dialogCallback = null;
+        }
+
+        function dialogCancel() {
+            document.getElementById('customDialog').classList.remove('active');
+            if (dialogCallback && dialogType === 'confirm') {
+                dialogCallback(false);
+            }
+            dialogCallback = null;
+        }
+
+        // Handle Enter key in dialog
+        document.getElementById('dialogInput')?.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') dialogOk();
+        });
+
+        // ============ STATUS NAV ============
+        function switchStatus(s) {
+            currentStatus = s;
+            selectedTaskId = null;
+            document.querySelectorAll('.nav-item').forEach(el => {
+                el.classList.toggle('active', el.dataset.status === s);
+            });
+
+            // Hide sort buttons for Done status
+            const sortBtns = document.querySelectorAll('.sort-btn');
+            sortBtns.forEach(btn => {
+                btn.style.display = s === 'done' ? 'none' : '';
+            });
+
+            renderTaskList();
+            renderDetail();
+        }
+
+        function renderNavCounts() {
+            const filtered = currentGroup === 'All' ? tasks : tasks.filter(t => t.group === currentGroup);
+            // Count non-archived tasks per status
+            ['todo', 'in-progress', 'waiting', 'done'].forEach(s => {
+                document.getElementById(`count-${s}`).textContent = filtered.filter(t => t.status === s && !t.archived).length;
+            });
+            // Count archived tasks
+            document.getElementById('count-archived').textContent = filtered.filter(t => t.archived).length;
+        }
+
+        // ============ TASK LIST ============
+        function getFilteredTasks() {
+            let list;
+            if (currentStatus === 'archived') {
+                // Show all archived tasks
+                list = tasks.filter(t => t.archived);
+            } else {
+                // Show non-archived tasks for this status
+                list = tasks.filter(t => t.status === currentStatus && !t.archived);
+            }
+            if (currentGroup !== 'All') list = list.filter(t => t.group === currentGroup);
+            if (searchQuery) {
+                const q = searchQuery.toLowerCase();
+                list = list.filter(t => t.title.toLowerCase().includes(q) || (t.assignee || '').toLowerCase().includes(q));
+            }
+            return sortTaskList(list);
+        }
+
+        function getLastActivity(t) {
+            // Get last comment date or creation date
+            let lastTs = t.created;
+            if (t.history && t.history.length > 0) {
+                const comments = t.history.filter(h => h.type === 'comment');
+                if (comments.length > 0) {
+                    lastTs = comments[comments.length - 1].ts;
+                }
+            }
+            return lastTs;
+        }
+
+        function sortTaskList(list) {
+            const pw = { High: 3, Medium: 2, Low: 1 };
+            // For Done status, sort by last activity (comment or created)
+            if (currentStatus === 'done') {
+                list.sort((a, b) => getLastActivity(b) - getLastActivity(a));
+                return list;
+            }
+            if (sortBy === 'priority') list.sort((a, b) => (pw[b.priority] || 0) - (pw[a.priority] || 0));
+            else if (sortBy === 'date') list.sort((a, b) => (a.targetDate || 'z').localeCompare(b.targetDate || 'z'));
+            else if (sortBy === 'title') list.sort((a, b) => a.title.localeCompare(b.title));
+            return list;
+        }
+
+        function sortTasks(by) { sortBy = by; renderTaskList(); }
+
+        function renderTaskList() {
+            const list = getFilteredTasks();
+            const titles = { 'todo': 'To Do', 'in-progress': 'In Progress', 'waiting': 'Waiting for Response', 'done': 'Done', 'archived': '📦 Archived' };
+            document.getElementById('listTitle').textContent = titles[currentStatus] || currentStatus;
+            document.getElementById('listCount').textContent = `${list.length} tasks`;
+
+            const container = document.getElementById('taskList');
+            if (list.length === 0) {
+                container.innerHTML = `<div style="text-align:center;padding:40px;color:var(--text-muted)">No tasks</div>`;
+                return;
+            }
+
+            const today = new Date();
+            const todayStr = today.toISOString().split('T')[0];
+
+            // Calculate calendar week boundaries (Monday to Sunday)
+            const dayOfWeek = today.getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
+            const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Days since Monday
+
+            const thisWeekStart = new Date(today);
+            thisWeekStart.setDate(today.getDate() - daysToMonday);
+            thisWeekStart.setHours(0, 0, 0, 0);
+
+            const thisWeekEnd = new Date(thisWeekStart);
+            thisWeekEnd.setDate(thisWeekStart.getDate() + 6); // Sunday
+
+            const nextWeekStart = new Date(thisWeekEnd);
+            nextWeekStart.setDate(nextWeekStart.getDate() + 1); // Next Monday
+
+            const nextWeekEnd = new Date(nextWeekStart);
+            nextWeekEnd.setDate(nextWeekStart.getDate() + 6); // Next Sunday
+
+            const thisWeekEndStr = thisWeekEnd.toISOString().split('T')[0];
+            const nextWeekStartStr = nextWeekStart.toISOString().split('T')[0];
+            const nextWeekEndStr = nextWeekEnd.toISOString().split('T')[0];
+
+            container.innerHTML = list.map(t => {
+                const subtasks = t.subtasks || [];
+                const openSubtasks = subtasks.filter(s => !s.done);
+                const completed = subtasks.length - openSubtasks.length;
+                const progress = subtasks.length ? Math.round(completed / subtasks.length * 100) : 0;
+
+                // Find the effective due date: earliest of task date or open subtask dates
+                let effectiveDate = t.targetDate;
+                if (t.status !== 'done') {
+                    // Get all dates to consider (task date + open subtask dates)
+                    const datesToCheck = [];
+                    if (t.targetDate) datesToCheck.push(t.targetDate);
+                    openSubtasks.forEach(s => {
+                        if (s.targetDate) datesToCheck.push(s.targetDate);
+                    });
+                    // Find the earliest date
+                    if (datesToCheck.length > 0) {
+                        effectiveDate = datesToCheck.sort()[0];
+                    }
+                }
+
+                const isOverdue = effectiveDate && effectiveDate < todayStr && t.status !== 'done';
+                const isDueToday = effectiveDate === todayStr && t.status !== 'done';
+                // This week: after today but within this calendar week (Mon-Sun)
+                const isDueThisWeek = effectiveDate && effectiveDate > todayStr && effectiveDate <= thisWeekEndStr && t.status !== 'done';
+                // Next week: within the next calendar week (Mon-Sun)
+                const isDueNextWeek = effectiveDate && effectiveDate >= nextWeekStartStr && effectiveDate <= nextWeekEndStr && t.status !== 'done';
+
+                let dueBadge = '';
+                if (isOverdue) dueBadge = '<span style="background:#ef4444;color:white;padding:2px 6px;border-radius:4px;font-size:10px;margin-left:6px">OVERDUE</span>';
+                else if (isDueToday) dueBadge = '<span style="background:#f59e0b;color:white;padding:2px 6px;border-radius:4px;font-size:10px;margin-left:6px">TODAY</span>';
+                else if (isDueThisWeek) dueBadge = '<span style="background:#3b82f6;color:white;padding:2px 6px;border-radius:4px;font-size:10px;margin-left:6px">THIS WEEK</span>';
+                else if (isDueNextWeek) dueBadge = '<span style="background:#8b5cf6;color:white;padding:2px 6px;border-radius:4px;font-size:10px;margin-left:6px">NEXT WEEK</span>';
+
+                const isSelected = bulkSelectedIds.has(t.id);
+                const checkBox = bulkSelectMode ? `<span style="font-size:18px;margin-right:8px">${isSelected ? '☑️' : '☐'}</span>` : '';
+
+                // Build subtask progress with percentage
+                let subtaskProgress = '';
+                if (subtasks.length) {
+                    subtaskProgress = `
+                        <div style="display:flex;align-items:center;gap:8px;margin-top:8px">
+                            <div class="subtask-progress" style="flex:1"><div class="subtask-bar" style="width:${progress}%"></div></div>
+                            <span style="font-size:11px;color:var(--text-muted);min-width:32px">${progress}%</span>
+                        </div>`;
+                }
+
+                return `
+                <div class="task-card ${t.id === selectedTaskId && !bulkSelectMode ? 'active' : ''} ${isOverdue ? 'overdue' : ''} ${isSelected ? 'bulk-selected' : ''}" onclick="selectTask('${t.id}')">
+                    <div class="task-header">
+                        ${checkBox}<div class="task-title">${escapeHtml(t.title)}</div>
+                        <span class="task-priority priority-${t.priority.toLowerCase()}">${t.priority}</span>
+                    </div>
+                    ${t.labels && t.labels.length ? `<div class="task-labels">${t.labels.map(l => `<span class="task-label" style="border-color:${l.color}">${l.name}</span>`).join('')}</div>` : ''}
+                    <div class="task-meta">
+                        <span>📅 ${effectiveDate || 'No date'}${dueBadge}</span>
+                        <span>👤 ${escapeHtml(t.assignee || 'Unassigned')}</span>
+                    </div>
+                    ${subtaskProgress}
+                </div>`;
+            }).join('');
+        }
+
+        function selectTask(id) {
+            if (bulkSelectMode) {
+                bulkToggleTask(id);
+                return;
+            }
+            selectedTaskId = id;
+            renderTaskList();
+            renderDetail();
+        }
+
+        // ============ BULK ACTIONS ============
+        let bulkSelectMode = false;
+        let bulkSelectedIds = new Set();
+
+        function toggleBulkSelect() {
+            bulkSelectMode = !bulkSelectMode;
+            bulkSelectedIds.clear();
+            document.getElementById('bulkActionsBar').style.display = bulkSelectMode ? 'flex' : 'none';
+            document.getElementById('bulkSelectBtn').style.background = bulkSelectMode ? 'var(--primary)' : '';
+            renderTaskList();
+            updateBulkCount();
+        }
+
+        function bulkToggleTask(id) {
+            if (bulkSelectedIds.has(id)) bulkSelectedIds.delete(id);
+            else bulkSelectedIds.add(id);
+            renderTaskList();
+            updateBulkCount();
+        }
+
+        function updateBulkCount() {
+            document.getElementById('bulkCount').textContent = bulkSelectedIds.size;
+        }
+
+        function bulkSelectAll() {
+            const list = getFilteredTasks();
+            if (bulkSelectedIds.size === list.length) {
+                bulkSelectedIds.clear();
+            } else {
+                list.forEach(t => bulkSelectedIds.add(t.id));
+            }
+            renderTaskList();
+            updateBulkCount();
+        }
+
+        function bulkMoveStatus() {
+            if (bulkSelectedIds.size === 0) return showToast('No tasks selected');
+            showDialog('Move Tasks', 'Enter new status (todo, in-progress, waiting, done):', '', (newStatus) => {
+                if (!newStatus) return;
+                const validStatuses = ['todo', 'in-progress', 'waiting', 'done'];
+                if (!validStatuses.includes(newStatus.toLowerCase())) {
+                    showAlert('Invalid Status', 'Use: todo, in-progress, waiting, or done');
+                    return;
+                }
+                let count = 0;
+                tasks.forEach(t => {
+                    if (bulkSelectedIds.has(t.id)) {
+                        t.status = newStatus.toLowerCase();
+                        t.history = t.history || [];
+                        t.history.push({ type: 'update', ts: Date.now(), txt: `Status changed to ${newStatus} (bulk action)` });
+                        count++;
+                    }
+                });
+                saveData();
+                toggleBulkSelect();
+                renderAll();
+                showToast(`Moved ${count} tasks to ${newStatus}`);
+            });
+        }
+
+        function bulkArchive() {
+            if (bulkSelectedIds.size === 0) return showToast('No tasks selected');
+            showConfirm('Archive Tasks', `Archive ${bulkSelectedIds.size} selected tasks?`, (confirmed) => {
+                if (confirmed) {
+                    let count = 0;
+                    tasks.forEach(t => {
+                        if (bulkSelectedIds.has(t.id)) {
+                            t.archived = true;
+                            t.history = t.history || [];
+                            t.history.push({ type: 'update', ts: Date.now(), txt: '📦 Task archived (bulk action)' });
+                            count++;
+                        }
+                    });
+                    saveData();
+                    toggleBulkSelect();
+                    renderAll();
+                    showToast(`Archived ${count} tasks`);
+                }
+            });
+        }
+
+        function bulkDelete() {
+            if (bulkSelectedIds.size === 0) return showToast('No tasks selected');
+            showConfirm('Delete Tasks', `Delete ${bulkSelectedIds.size} selected tasks? This cannot be undone.`, (confirmed) => {
+                if (confirmed) {
+                    const count = bulkSelectedIds.size;
+                    tasks = tasks.filter(t => !bulkSelectedIds.has(t.id));
+                    saveData();
+                    toggleBulkSelect();
+                    renderAll();
+                    showToast(`Deleted ${count} tasks`);
+                }
+            });
+        }
+
+        // ============ DETAIL PANE ============
+        let detailScrollTop = 0;
+
+        function saveDetailScroll() {
+            const body = document.querySelector('.detail-body');
+            if (body) detailScrollTop = body.scrollTop;
+        }
+
+        function restoreDetailScroll() {
+            const body = document.querySelector('.detail-body');
+            if (body) body.scrollTop = detailScrollTop;
+        }
+
+        function renderDetail(preserveScroll = false) {
+            if (preserveScroll) saveDetailScroll();
+
+            const pane = document.getElementById('detailPane');
+            if (!selectedTaskId) {
+                pane.innerHTML = `<div class="detail-empty"><div class="detail-empty-icon">📋</div><div style="font-size:16px;font-weight:500">Select a task</div><div style="margin-top:8px">Click on a task to view details</div></div>`;
+                return;
+            }
+            const t = tasks.find(x => x.id === selectedTaskId);
+            if (!t) { selectedTaskId = null; renderDetail(); return; }
+
+            const subtasks = t.subtasks || [];
+            const history = t.history || [];
+
+            pane.innerHTML = `
+            <div class="detail-header">
+                <span style="font-size:18px;font-weight:600">Task Details ${t.archived ? '<span style="color:var(--text-muted);font-size:12px">(Archived)</span>' : ''}</span>
+                <div style="display:flex;gap:8px">
+                    <button class="btn btn-secondary" onclick="archiveTask()">${t.archived ? '📤 Unarchive' : '📦 Archive'}</button>
+
+                    <button class="btn btn-secondary" style="color:var(--danger)" onclick="deleteTask()">🗑 Delete</button>
+                </div>
+            </div>
+            <div class="detail-body">
+                <div class="detail-section">
+                    <input class="detail-input title-input" value="${escapeHtml(t.title)}" onchange="updateField('title', this.value)">
+                </div>
+                <div class="detail-section">
+                    <div class="detail-row">
+                        <div>
+                            <div class="detail-label">Status</div>
+                            <select class="detail-input" onchange="updateField('status', this.value)">
+                                <option value="todo" ${t.status === 'todo' ? 'selected' : ''}>To Do</option>
+                                <option value="in-progress" ${t.status === 'in-progress' ? 'selected' : ''}>In Progress</option>
+                                <option value="waiting" ${t.status === 'waiting' ? 'selected' : ''}>Waiting</option>
+                                <option value="done" ${t.status === 'done' ? 'selected' : ''}>Done</option>
+                            </select>
+                        </div>
+                        <div>
+                            <div class="detail-label">Priority</div>
+                            <select class="detail-input" onchange="updateField('priority', this.value)">
+                                <option value="High" ${t.priority === 'High' ? 'selected' : ''}>High</option>
+                                <option value="Medium" ${t.priority === 'Medium' ? 'selected' : ''}>Medium</option>
+                                <option value="Low" ${t.priority === 'Low' ? 'selected' : ''}>Low</option>
+                            </select>
+                        </div>
+                        <div>
+                            <div class="detail-label">Due Date</div>
+                            <input type="date" class="detail-input" value="${t.targetDate || ''}" onchange="updateField('targetDate', this.value)">
+                        </div>
+                    </div>
+                </div>
+                <div class="detail-section">
+                    <div class="detail-row">
+                        <div>
+                            <div class="detail-label">Assignee</div>
+                            <input class="detail-input" value="${escapeHtml(t.assignee || '')}" onchange="updateField('assignee', this.value)">
+                        </div>
+                        <div>
+                            <div class="detail-label">Group</div>
+                            <select class="detail-input" onchange="updateField('group', this.value)">
+                                ${groups.map(g => `<option value="${g}" ${t.group === g ? 'selected' : ''}>${g}</option>`).join('')}
+                            </select>
+                        </div>
+                        <div>
+                            <div class="detail-label">Email ID</div>
+                            <input class="detail-input" value="${escapeHtml(t.emailId || '')}" onchange="updateField('emailId', this.value)" placeholder="Email reference">
+                        </div>
+                    </div>
+                </div>
+                <div class="detail-section">
+                    <div class="detail-label">Description</div>
+                    <textarea class="detail-input" onchange="updateField('description', this.value)">${escapeHtml(t.description || '')}</textarea>
+                </div>
+                <div class="detail-section">
+                    <div class="detail-label">Subtasks (${subtasks.filter(s => s.done).length}/${subtasks.length})</div>
+                    <div class="subtasks-list">
+                        ${subtasks.map((s, i) => `
+                        <div class="subtask-item" style="display:flex;align-items:center;gap:8px">
+                            <input type="checkbox" class="subtask-checkbox" ${s.done ? 'checked' : ''} onchange="toggleSubtask(${i})">
+                            <input class="detail-input subtask-text-input ${s.done ? 'completed' : ''}" value="${escapeHtml(s.text)}" onchange="updateSubtaskText(${i}, this.value)" style="flex:1;padding:6px 10px">
+                            <input type="date" class="detail-input" value="${s.targetDate || ''}" onchange="updateSubtaskDate(${i}, this.value)" style="width:130px;padding:6px" title="Subtask due date">
+                            <span class="subtask-delete" onclick="deleteSubtask(${i})">×</span>
+                        </div>`).join('')}
+                    </div>
+                    <div class="add-subtask">
+                        <input class="detail-input" id="newSubtask" placeholder="Add subtask..." onkeypress="if(event.key==='Enter')addSubtask()" style="flex:1">
+                        <input type="date" class="detail-input" id="newSubtaskDate" style="width:140px" title="Due date (optional)">
+                        <button class="btn btn-secondary" onclick="addSubtask()">Add</button>
+                    </div>
+                </div>
+            <div class="detail-section" id="attachmentsSection">
+                <div class="detail-label">📎 Attachments <span id="attachmentCount"></span></div>
+                <div class="attachments-grid" id="attachmentsGrid">Loading...</div>
+                <div class="attachment-upload-area" id="uploadArea" onclick="pickAttachment()" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)">
+                    📁 Click to browse or drag files here (max 5MB)
+                </div>
+            </div>
+            <div class="detail-section">
+                <div class="detail-label">Activity</div>
+                    <div class="activity-list">
+                        ${history.slice(-20).map((h, i) => {
+                // Calculate actual index in history array
+                const actualIndex = Math.max(0, history.length - 20) + i;
+                return `
+                        <div class="activity-item">
+                            <div class="activity-header">
+                                <span>${timeAgo(h.ts)} • ${formatDateTime(h.ts)}</span>
+                                <span class="activity-delete" onclick="deleteHistoryItem(${actualIndex})" title="Delete this entry">×</span>
+                            </div>
+                            <div class="activity-content">${escapeHtml(h.txt)}</div>
+                        </div>`;
+            }).join('')}
+                    </div>
+                    <div class="comment-box">
+                        <textarea class="detail-input" id="commentInput" placeholder="Add a comment..."></textarea>
+                        <button class="btn btn-primary" onclick="addComment()">Post</button>
+                    </div>
+                </div>
+            </div>`;
+
+            if (preserveScroll) setTimeout(restoreDetailScroll, 0);
+
+            // Load attachments asynchronously
+            if (isDesktop()) loadAttachments();
+        }
+
+        function updateField(field, value) {
+            const t = tasks.find(x => x.id === selectedTaskId);
+            if (!t || t[field] === value) return;
+            const oldValue = t[field] || 'None';
+            t[field] = value;
+            t.history = t.history || [];
+
+            // Track completion timestamp for Done sorting
+            if (field === 'status') {
+                if (value === 'done') {
+                    t.completedAt = Date.now();
+                } else if (oldValue === 'done') {
+                    delete t.completedAt;
+                }
+            }
+
+            // Create detailed history message
+            const fieldLabels = {
+                'status': '🔄 Status',
+                'priority': '⚡ Priority',
+                'targetDate': '📅 Due Date',
+                'assignee': '👤 Assignee',
+                'group': '📂 Group',
+                'title': '✏️ Title',
+                'description': '📝 Description',
+                'emailId': '📧 Email ID'
+            };
+            const label = fieldLabels[field] || field;
+            const statusLabels = { 'todo': 'To Do', 'in-progress': 'In Progress', 'waiting': 'Waiting for Response', 'done': 'Done' };
+
+            let oldDisplay = oldValue;
+            let newDisplay = value;
+            if (field === 'status') {
+                oldDisplay = statusLabels[oldValue] || oldValue;
+                newDisplay = statusLabels[value] || value;
+            }
+
+            t.history.push({ type: 'update', ts: Date.now(), txt: `${label}: ${oldDisplay} → ${newDisplay}` });
+            saveData();
+            renderAll();
+        }
+
+        function deleteTask() {
+            showConfirm('Delete Task', 'Are you sure you want to delete this task? This cannot be undone.', async (confirmed) => {
+                if (confirmed) {
+                    if (isDesktop && typeof pywebview !== 'undefined') {
+                        await pywebview.api.delete_task_attachments(selectedTaskId);
+                    }
+                    tasks = tasks.filter(t => t.id !== selectedTaskId);
+                    selectedTaskId = null;
+                    saveData();
+                    renderAll();
+                    showToast('Task deleted');
+                }
+            });
+        }
+
+        function archiveTask() {
+            const t = tasks.find(x => x.id === selectedTaskId);
+            if (!t) return;
+            t.archived = !t.archived;
+            t.history = t.history || [];
+            t.history.push({ type: 'update', ts: Date.now(), txt: t.archived ? '📦 Task archived' : '📤 Task unarchived' });
+            saveData();
+            renderAll();
+            showToast(t.archived ? 'Task archived' : 'Task unarchived');
+        }
+
+        function duplicateTask() {
+            const t = tasks.find(x => x.id === selectedTaskId);
+            if (!t) return;
+            const duplicate = {
+                ...JSON.parse(JSON.stringify(t)),
+                id: Date.now(),
+                title: t.title + ' (Copy)',
+                created: Date.now(),
+                history: [{ type: 'create', ts: Date.now(), txt: '📋 Task duplicated from "' + t.title + '"' }],
+                archived: false
+            };
+            tasks.push(duplicate);
+            saveData();
+            selectedTaskId = duplicate.id;
+            renderAll();
+            showToast('Task duplicated');
+        }
+
+        // ============ SUBTASKS ============
+        function addSubtask() {
+            const input = document.getElementById('newSubtask');
+            const dateInput = document.getElementById('newSubtaskDate');
+            const text = input.value.trim();
+            if (!text) return;
+            const t = tasks.find(x => x.id === selectedTaskId);
+            if (!t) return;
+            t.subtasks = t.subtasks || [];
+            t.subtasks.push({
+                text,
+                done: false,
+                targetDate: dateInput?.value || ''
+            });
+            input.value = '';
+            if (dateInput) dateInput.value = '';
+            saveData();
+            renderDetail(true);
+            setTimeout(() => document.getElementById('newSubtask')?.focus(), 0);
+        }
+
+        function toggleSubtask(i) {
+            const t = tasks.find(x => x.id === selectedTaskId);
+            if (t && t.subtasks && t.subtasks[i]) {
+                t.subtasks[i].done = !t.subtasks[i].done;
+                saveData();
+                renderDetail(true);
+                renderTaskList();
+            }
+        }
+
+        function deleteSubtask(i) {
+            const t = tasks.find(x => x.id === selectedTaskId);
+            if (t && t.subtasks) {
+                t.subtasks.splice(i, 1);
+                saveData();
+                renderDetail(true);
+                renderTaskList();
+            }
+        }
+
+        function updateSubtaskText(i, newText) {
+            const t = tasks.find(x => x.id === selectedTaskId);
+            if (t && t.subtasks && t.subtasks[i]) {
+                t.subtasks[i].text = newText.trim();
+                saveData();
+                renderTaskList();
+            }
+        }
+
+        function updateSubtaskDate(i, newDate) {
+            const t = tasks.find(x => x.id === selectedTaskId);
+            if (t && t.subtasks && t.subtasks[i]) {
+                t.subtasks[i].targetDate = newDate;
+                saveData();
+                renderTaskList();
+            }
+        }
+
+        // ============ COMMENTS ============
+        function addComment() {
+            const input = document.getElementById('commentInput');
+            const text = input.value.trim();
+            if (!text) return;
+            const t = tasks.find(x => x.id === selectedTaskId);
+            if (!t) return;
+            t.history = t.history || [];
+            t.history.push({ type: 'comment', ts: Date.now(), txt: text });
+            input.value = '';
+            saveData();
+            renderDetail(true);
+        }
+
+        function deleteHistoryItem(index) {
+            const t = tasks.find(x => x.id === selectedTaskId);
+            if (!t || !t.history || index < 0 || index >= t.history.length) return;
+
+            showConfirm('Delete Entry', 'Delete this history entry?', (confirmed) => {
+                if (confirmed) {
+                    t.history.splice(index, 1);
+                    saveData();
+                    renderDetail(true);
+                    showToast('Entry deleted');
+                }
+            });
+        }
+
+        // ============ ATTACHMENTS ============
+        const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+
+        async function loadAttachments() {
+            if (!selectedTaskId || !isDesktop) {
+                document.getElementById('attachmentsGrid').innerHTML = '<div style="color:var(--text-muted)">No attachments</div>';
+                document.getElementById('attachmentCount').textContent = '';
+                return;
+            }
+
+            const attachments = await pywebview.api.list_attachments(selectedTaskId);
+            const grid = document.getElementById('attachmentsGrid');
+            const count = document.getElementById('attachmentCount');
+
+            if (!attachments || attachments.length === 0) {
+                grid.innerHTML = '<div style="color:var(--text-muted);padding:8px">No attachments yet</div>';
+                count.textContent = '';
+                return;
+            }
+
+            count.textContent = `(${attachments.length})`;
+            grid.innerHTML = attachments.map(a => renderAttachmentItem(a)).join('');
+        }
+
+        function renderAttachmentItem(a) {
+            const icon = a.isImage ? '' : (a.name.endsWith('.pdf') ? '📄' : '📁');
+            const thumb = a.isImage ? `<div class="attachment-thumb" style="background:var(--bg-tertiary)" onclick="previewAttachment('${escapeHtml(a.name)}')">🖼️</div>`
+                : `<div class="attachment-icon">${icon}</div>`;
+            const linkedBadge = a.linked ? '<span class="attachment-linked">🔗</span>' : '';
+            const missing = a.exists === false ? ' style="opacity:0.5" title="File missing"' : '';
+
+            return `
+                <div class="attachment-item"${missing} onclick="previewAttachment('${escapeHtml(a.name)}')">
+                    ${linkedBadge}
+                    <span class="attachment-delete" onclick="event.stopPropagation(); deleteAttachment('${escapeHtml(a.name)}')">×</span>
+                    ${thumb}
+                    <div class="attachment-name" title="${escapeHtml(a.name)}">${escapeHtml(a.name)}</div>
+                    <div class="attachment-size">${formatFileSize(a.size)}</div>
+                </div>`;
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / 1024 / 1024).toFixed(1) + ' MB';
+        }
+
+        async function pickAttachment() {
+            if (!isDesktop || !selectedTaskId) {
+                showAlert('Desktop Only', 'Attachments are only available in the desktop version.');
+                return;
+            }
+
+            const result = await pywebview.api.pick_attachment_file();
+            if (result.cancelled) return;
+            if (!result.success) {
+                showAlert('Error', result.error || 'Failed to select file');
+                return;
+            }
+
+            // Custom dialog for Copy vs Link
+            const dialog = document.createElement('div');
+            dialog.className = 'modal-overlay active';
+            dialog.innerHTML = `
+                <div class="modal" style="max-width:450px">
+                    <div class="modal-header">
+                        <span class="modal-title">📎 Add Attachment</span>
+                        <span class="close-btn" onclick="this.closest('.modal-overlay').remove()">×</span>
+                    </div>
+                    <div class="modal-body">
+                        <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+                            <div style="font-size:24px">📄</div>
+                            <div>
+                                <div style="font-weight:600">${escapeHtml(result.name)}</div>
+                                <div style="font-size:12px;color:var(--text-muted)">${formatFileSize(result.size)}</div>
+                            </div>
+                        </div>
+                        <div style="margin-bottom:20px;font-size:14px;color:var(--text-secondary)">
+                            How would you like to attach this file?
+                        </div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+                            <div class="option-card" onclick="document.getElementById('btnCopy').click()" style="padding:12px;border:1px solid var(--border);border-radius:8px;cursor:pointer;transition:all 0.2s">
+                                <div style="font-weight:600;display:flex;align-items:center;gap:8px;margin-bottom:4px">📁 Copy</div>
+                                <div style="font-size:11px;color:var(--text-muted)">Copies file to app storage. Portable.</div>
+                            </div>
+                            <div class="option-card" onclick="document.getElementById('btnLink').click()" style="padding:12px;border:1px solid var(--border);border-radius:8px;cursor:pointer;transition:all 0.2s">
+                                <div style="font-weight:600;display:flex;align-items:center;gap:8px;margin-bottom:4px">🔗 Link</div>
+                                <div style="font-size:11px;color:var(--text-muted)">Keeps original location. Saves space.</div>
+                            </div>
+                        </div>
+                        <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:24px">
+                            <button class="btn btn-secondary" onclick="this.closest('.modal-overlay').remove()">Cancel</button>
+                            <button class="btn btn-secondary" id="btnLink">Link File</button>
+                            <button class="btn btn-primary" id="btnCopy">Copy File</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            document.body.appendChild(dialog);
+
+            const handleChoice = async (copy) => {
+                dialog.remove();
+                const saveResult = await pywebview.api.save_attachment(selectedTaskId, result.path, copy);
+                if (saveResult.success) {
+                    showToast(`Attachment ${copy ? 'copied' : 'linked'}: ${saveResult.name}`);
+                    loadAttachments();
+                } else {
+                    showAlert('Error', saveResult.error || 'Failed to save attachment');
+                }
+            };
+
+            document.getElementById('btnCopy').onclick = () => handleChoice(true);
+            document.getElementById('btnLink').onclick = () => handleChoice(false);
+        }
+
+        async function previewAttachment(name) {
+            if (!isDesktop || !selectedTaskId) return;
+
+            const result = await pywebview.api.get_attachment(selectedTaskId, name);
+            if (!result.success) {
+                showAlert('Error', result.error || 'Failed to load file');
+                return;
+            }
+
+            // Check if it's an image
+            if (result.data.startsWith('data:image/')) {
+                showImagePreview(result.data, name);
+            } else {
+                // For non-images, offer to open/download
+                showAlert('File Preview', `File: ${name}\nSize: ${formatFileSize(result.size)}\n\nNon-image files cannot be previewed.`);
+            }
+        }
+
+        function showImagePreview(dataUrl, name) {
+            let modal = document.getElementById('imagePreviewModal');
+            if (!modal) {
+                modal = document.createElement('div');
+                modal.id = 'imagePreviewModal';
+                modal.className = 'preview-modal';
+                modal.innerHTML = `<span class="preview-close" onclick="closeImagePreview()">×</span><img src="" alt="">`;
+                modal.onclick = (e) => { if (e.target === modal) closeImagePreview(); };
+                document.body.appendChild(modal);
+            }
+            modal.querySelector('img').src = dataUrl;
+            modal.querySelector('img').alt = name;
+            modal.classList.add('active');
+        }
+
+        function closeImagePreview() {
+            const modal = document.getElementById('imagePreviewModal');
+            if (modal) modal.classList.remove('active');
+        }
+
+        async function deleteAttachment(name) {
+            if (!isDesktop || !selectedTaskId) return;
+
+            showConfirm('Delete Attachment', `Delete "${name}"? This cannot be undone.`, async (confirmed) => {
+                if (confirmed) {
+                    const result = await pywebview.api.delete_attachment(selectedTaskId, name);
+                    if (result.success) {
+                        showToast('Attachment deleted');
+                        loadAttachments();
+                    } else {
+                        showAlert('Error', result.error || 'Failed to delete');
+                    }
+                }
+            });
+        }
+
+        // Drag and drop handlers
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.currentTarget.classList.add('dragover');
+        }
+
+        function handleDragLeave(e) {
+            e.currentTarget.classList.remove('dragover');
+        }
+
+        async function handleDrop(e) {
+            e.preventDefault();
+            e.currentTarget.classList.remove('dragover');
+
+            if (!isDesktop) {
+                showAlert('Desktop Only', 'Drag and drop is only available in the desktop version.');
+                return;
+            }
+
+            // Note: In webview, we can't easily get file paths from drag-drop
+            // Show a message to use the file picker instead
+            showAlert('Use File Picker', 'For security reasons, please use the "Click to browse" button to add files.');
+        }
+
+        // ============ CREATE TASK ============
+        let newTaskSubtasks = []; // Temporary storage for subtasks being added
+
+        function checkEmailDuplicate() {
+            const emailId = document.getElementById('newEmailId').value.trim();
+            const warning = document.getElementById('emailWarning');
+            if (emailId) {
+                const duplicate = tasks.find(t => t.emailId && t.emailId.toLowerCase() === emailId.toLowerCase());
+                if (duplicate) {
+                    warning.textContent = `⚠️ Duplicate found: "${duplicate.title}" has the same Email ID`;
+                    warning.style.display = 'block';
+                    return true;
+                }
+            }
+            warning.style.display = 'none';
+            return false;
+        }
+
+        // Add event listener for email duplicate check
+        document.getElementById('newEmailId')?.addEventListener('input', checkEmailDuplicate);
+
+        function populateNewTaskGroupDropdown() {
+            const sel = document.getElementById('newGroup');
+            if (!sel) return;
+            const defaultGroup = currentGroup === 'All' ? 'General' : currentGroup;
+            sel.innerHTML = groups.map(g =>
+                `<option value="${g}" ${g === defaultGroup ? 'selected' : ''}>${g}</option>`
+            ).join('');
+        }
+
+        function addNewTaskSubtask() {
+            const textInput = document.getElementById('newSubtaskText');
+            const dateInput = document.getElementById('newSubtaskDate');
+            const text = textInput.value.trim();
+            if (!text) return;
+
+            newTaskSubtasks.push({
+                text: text,
+                done: false,
+                targetDate: dateInput.value || ''
+            });
+
+            textInput.value = '';
+            dateInput.value = '';
+            renderNewTaskSubtasks();
+            textInput.focus();
+        }
+
+        function removeNewTaskSubtask(index) {
+            newTaskSubtasks.splice(index, 1);
+            renderNewTaskSubtasks();
+        }
+
+        function renderNewTaskSubtasks() {
+            const container = document.getElementById('newSubtasksList');
+            if (!container) return;
+
+            if (newTaskSubtasks.length === 0) {
+                container.innerHTML = '';
+                return;
+            }
+
+            container.innerHTML = newTaskSubtasks.map((s, i) => `
+                <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--bg-tertiary);border-radius:6px;margin-bottom:6px">
+                    <span style="flex:1;font-size:14px">${escapeHtml(s.text)}</span>
+                    ${s.targetDate ? `<span style="font-size:12px;color:var(--text-muted)">📅 ${s.targetDate}</span>` : ''}
+                    <span style="cursor:pointer;color:var(--danger)" onclick="removeNewTaskSubtask(${i})">×</span>
+                </div>
+            `).join('');
+        }
+
+        function resetNewTaskModal() {
+            document.getElementById('newTitle').value = '';
+            document.getElementById('newDesc').value = '';
+            document.getElementById('newAssignee').value = '';
+            document.getElementById('newEmailId').value = '';
+            document.getElementById('newDate').value = '';
+            document.getElementById('newSubtaskText').value = '';
+            document.getElementById('newSubtaskDate').value = '';
+            document.getElementById('emailWarning').style.display = 'none';
+            newTaskSubtasks = [];
+            renderNewTaskSubtasks();
+        }
+
+        function createTask() {
+            const title = document.getElementById('newTitle').value.trim();
+            if (!title) {
+                showAlert('Title Required', 'Please enter a task title.');
+                return;
+            }
+
+            const emailId = document.getElementById('newEmailId').value.trim();
+            const selectedGroup = document.getElementById('newGroup').value || 'General';
+
+            function doCreateTask() {
+                const task = {
+                    id: Date.now().toString(),
+                    title,
+                    status: 'todo',
+                    priority: document.getElementById('newPriority').value,
+                    targetDate: document.getElementById('newDate').value,
+                    assignee: document.getElementById('newAssignee').value,
+                    emailId: emailId,
+                    description: document.getElementById('newDesc').value,
+                    group: selectedGroup,
+                    created: Date.now(),
+                    subtasks: [...newTaskSubtasks],
+                    labels: [],
+                    history: [{ type: 'create', ts: Date.now(), txt: 'Task created' }]
+                };
+                tasks.push(task);
+                saveData();
+                closeModal('newTaskModal');
+                resetNewTaskModal();
+                renderAll();
+                showToast(`Task created in "${selectedGroup}"`);
+            }
+
+            if (emailId) {
+                const duplicate = tasks.find(t => t.emailId && t.emailId.toLowerCase() === emailId.toLowerCase());
+                if (duplicate) {
+                    showConfirm('Duplicate Email ID', `This Email ID already exists in task "${duplicate.title}". Create anyway?`, (confirmed) => {
+                        if (confirmed) doCreateTask();
+                    });
+                    return;
+                }
+            }
+
+            doCreateTask();
+        }
+
+        // ============ IMPORT/EXPORT ============
+        function showJSONExportDialog() {
+            // Remove old dialog to ensure new fields are present
+            document.getElementById('jsonExportDialog')?.remove();
+
+            // Build group checkboxes
+            const groupCheckboxes = groups.map(g =>
+                `<label style="display:flex;align-items:center;gap:6px"><input type="checkbox" class="json_group_checkbox" value="${escapeHtml(g)}" checked> ${escapeHtml(g)}</label>`
+            ).join('');
+
+            // Build status checkboxes
+            const statuses = [
+                { value: 'todo', label: 'To Do' },
+                { value: 'in-progress', label: 'In Progress' },
+                { value: 'waiting', label: 'Waiting' },
+                { value: 'done', label: 'Done' }
+            ];
+            const statusCheckboxes = statuses.map(s =>
+                `<label style="display:flex;align-items:center;gap:6px"><input type="checkbox" class="json_status_checkbox" value="${s.value}" checked> ${s.label}</label>`
+            ).join('');
+
+            let dialog = document.createElement('div');
+            dialog.id = 'jsonExportDialog';
+            dialog.className = 'modal-overlay active';
+            dialog.innerHTML = `
+                <div class="modal" style="max-width:550px">
+                    <div class="modal-header">
+                        <span>📦 Export Data</span>
+                        <span class="close-btn" onclick="closeJSONExportDialog()">×</span>
+                    </div>
+                    <div class="modal-body" style="padding:24px;max-height:70vh;overflow-y:auto">
+                        <div style="margin-bottom:20px;padding:16px;background:var(--bg-tertiary);border-radius:8px">
+                            <div style="font-weight:600;margin-bottom:12px">📁 Groups to Export</div>
+                            <div style="display:flex;flex-wrap:wrap;gap:12px">
+                                ${groupCheckboxes}
+                            </div>
+                            <div style="margin-top:8px;display:flex;gap:8px">
+                                <button class="btn btn-secondary" style="padding:4px 8px;font-size:12px" onclick="jsonSelectAllGroups(true)">Select All</button>
+                                <button class="btn btn-secondary" style="padding:4px 8px;font-size:12px" onclick="jsonSelectAllGroups(false)">Deselect All</button>
+                            </div>
+                        </div>
+                        <div style="margin-bottom:20px;padding:16px;background:var(--bg-tertiary);border-radius:8px">
+                            <div style="font-weight:600;margin-bottom:12px">📊 Status to Export</div>
+                            <div style="display:flex;flex-wrap:wrap;gap:12px">
+                                ${statusCheckboxes}
+                            </div>
+                            <div style="margin-top:8px;display:flex;gap:8px">
+                                <button class="btn btn-secondary" style="padding:4px 8px;font-size:12px" onclick="jsonSelectAllStatuses(true)">Select All</button>
+                                <button class="btn btn-secondary" style="padding:4px 8px;font-size:12px" onclick="jsonSelectAllStatuses(false)">Deselect All</button>
+                            </div>
+                        </div>
+                        <div style="padding:12px;background:var(--bg-secondary);border-radius:8px;margin-bottom:16px">
+                            <div style="font-size:14px"><strong><span id="jsonExportCount">0</span> tasks</strong> will be exported</div>
+                            
+                            <div style="margin-top:12px">
+                                <label class="checkbox-label" style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:500">
+                                    <input type="checkbox" id="includeAttachments" checked onchange="updateJSONExportButton()">
+                                    <span>Include Attachments (Export as ZIP)</span>
+                                </label>
+                                <div style="color:var(--text-muted);font-size:11px;margin-top:4px;margin-left:24px">
+                                    If unchecked, exports as a single JSON file without attachments.
+                                </div>
+                            </div>
+                        </div>
+                        <div style="display:flex;gap:12px;justify-content:flex-end">
+                            <button class="btn btn-secondary" onclick="closeJSONExportDialog()">Cancel</button>
+                            <button class="btn btn-primary" id="exportBtn" onclick="doExportJSON()">Export ZIP</button>
+                        </div>
+                    </div>
+                </div>`;
+            document.body.appendChild(dialog);
+            updateJSONExportCount();
+            // Check desktop mode for initial button state
+            updateJSONExportButton();
+
+            // Add event listeners for count updates
+            dialog.querySelectorAll('.json_group_checkbox, .json_status_checkbox').forEach(cb => {
+                cb.addEventListener('change', updateJSONExportCount);
+            });
+        }
+
+        function updateJSONExportButton() {
+            const cb = document.getElementById('includeAttachments');
+            const btn = document.getElementById('exportBtn');
+            if (cb && btn) {
+                btn.textContent = cb.checked ? 'Export ZIP' : 'Export JSON';
+            }
+        }
+
+        function closeJSONExportDialog() {
+            document.getElementById('jsonExportDialog')?.remove();
+        }
+
+        // ... (existing helper functions kept same, skipping for brevity in implementation step if not touching them, but I must preserve context if replacing block)
+        // Wait, I should use replace_file_content targetting the specific block only.
+
+        function getJSONFilteredTasks() {
+            const selectedGroups = Array.from(document.querySelectorAll('.json_group_checkbox:checked')).map(cb => cb.value);
+            const selectedStatuses = Array.from(document.querySelectorAll('.json_status_checkbox:checked')).map(cb => cb.value);
+
+            return tasks.filter(t =>
+                selectedGroups.includes(t.group) &&
+                (selectedStatuses.includes(t.status) || (t.archived && selectedStatuses.includes('archived')))
+            );
+        }
+
+        function updateJSONExportCount() {
+            const count = getJSONFilteredTasks().length;
+            const el = document.getElementById('jsonExportCount');
+            if (el) el.textContent = count;
+        }
+
+        async function doExportJSON() {
+            const filteredTasks = getJSONFilteredTasks();
+
+            if (filteredTasks.length === 0) {
+                showAlert('No Tasks', 'No tasks match the selected filters.');
+                return;
+            }
+
+            const selectedGroups = Array.from(document.querySelectorAll('.json_group_checkbox:checked')).map(cb => cb.value);
+            const includeAttachments = document.getElementById('includeAttachments')?.checked ?? true;
+
+            // Prepare export data
+            const exportData = {
+                tasks: filteredTasks,
+                groups: selectedGroups,
+                labels: labels,
+                exportDate: new Date().toISOString(),
+                version: '2.0'
+            };
+
+            if (isDesktop()) {
+                if (includeAttachments) {
+                    // Export as ZIP with attachments
+                    try {
+                        const result = await pywebview.api.export_with_attachments(exportData);
+                        if (result.success) {
+                            const attachMsg = result.attachmentsCount > 0 ? ` with ${result.attachmentsCount} attachments` : '';
+                            showToast(`Exported ${filteredTasks.length} tasks${attachMsg}`);
+                            closeJSONExportDialog();
+                        } else if (!result.cancelled) {
+                            showAlert('Export Failed', result.error || 'Failed to export');
+                        }
+                    } catch (e) {
+                        console.error('Export error:', e);
+                        showAlert('Export Error', 'Failed to export: ' + e.message);
+                    }
+                } else {
+                    // Export as JSON only
+                    try {
+                        const result = await pywebview.api.show_save_dialog('kanban_export.json', ['JSON Files (*.json)', 'All Files (*.*)']);
+                        if (result.success) {
+                            const data = JSON.stringify(exportData, null, 2);
+                            const saveResult = await pywebview.api.save_to_file(result.path, data);
+                            if (saveResult.success) {
+                                showToast(`Exported ${filteredTasks.length} tasks to JSON`);
+                                closeJSONExportDialog();
+                            } else {
+                                showAlert('Export Failed', saveResult.error || 'Failed to check file');
+                            }
+                        }
+                    } catch (e) {
+                        console.error('Export error:', e);
+                        showAlert('Export Error', 'Failed to export: ' + e.message);
+                    }
+                }
+            } else {
+                // Browser mode - export as JSON only
+                // ... (code for browser mode)
+                const data = JSON.stringify(exportData, null, 2);
+                const blob = new Blob([data], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'kanban_export.json';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+
+                showToast(`Exported ${filteredTasks.length} tasks`);
+                closeJSONExportDialog();
+            }
+        }
+
+
+        // Legacy function for backward compatibility
+        async function handleExport() {
+            showJSONExportDialog();
+        }
+
+        function showCSVExportDialog() {
+            // Remove old dialog to ensure new fields are present
+            document.getElementById('csvExportDialog')?.remove();
+
+            // Build group checkboxes
+            const groupCheckboxes = groups.map(g =>
+                `<label style="display:flex;align-items:center;gap:6px"><input type="checkbox" class="csv_group_checkbox" value="${escapeHtml(g)}" checked> ${escapeHtml(g)}</label>`
+            ).join('');
+
+            let dialog = document.createElement('div');
+            dialog.id = 'csvExportDialog';
+            dialog.className = 'modal-overlay active';
+            dialog.innerHTML = `
+                <div class="modal" style="max-width:550px">
+                    <div class="modal-header">
+                        <span>📊 Export to CSV</span>
+                        <span class="close-btn" onclick="closeCSVExportDialog()">×</span>
+                    </div>
+                    <div class="modal-body" style="padding:24px;max-height:70vh;overflow-y:auto">
+                        <div style="margin-bottom:20px;padding:16px;background:var(--bg-tertiary);border-radius:8px">
+                            <div style="font-weight:600;margin-bottom:12px">📁 Groups to Export</div>
+                            <div style="display:flex;flex-wrap:wrap;gap:12px">
+                                ${groupCheckboxes}
+                            </div>
+                            <div style="margin-top:8px;display:flex;gap:8px">
+                                <button class="btn btn-secondary" style="padding:4px 8px;font-size:12px" onclick="csvSelectAllGroups(true)">Select All</button>
+                                <button class="btn btn-secondary" style="padding:4px 8px;font-size:12px" onclick="csvSelectAllGroups(false)">Deselect All</button>
+                            </div>
+                        </div>
+                        <div style="margin-bottom:20px;padding:16px;background:var(--bg-tertiary);border-radius:8px">
+                            <div style="font-weight:600;margin-bottom:12px">📅 Date Range Filter</div>
+                            <div style="display:flex;gap:12px;margin-bottom:8px">
+                                <div style="flex:1">
+                                    <label style="font-size:12px;color:var(--text-muted)">From</label>
+                                    <input type="date" id="csv_dateFrom" class="form-input" style="width:100%">
+                                </div>
+                                <div style="flex:1">
+                                    <label style="font-size:12px;color:var(--text-muted)">To</label>
+                                    <input type="date" id="csv_dateTo" class="form-input" style="width:100%">
+                                </div>
+                            </div>
+                            <div style="display:flex;gap:12px">
+                                <label style="font-size:12px"><input type="radio" name="csv_dateType" value="created" checked> Created Date</label>
+                                <label style="font-size:12px"><input type="radio" name="csv_dateType" value="due"> Due Date</label>
+                                <label style="font-size:12px"><input type="radio" name="csv_dateType" value="activity"> Last Activity</label>
+                            </div>
+                        </div>
+                        <p style="margin-bottom:12px;font-weight:600">Select columns to include:</p>
+                        <div style="display:flex;flex-direction:column;gap:8px">
+                            <label><input type="checkbox" id="csv_basic" checked disabled> Basic Fields (ID, Title, Status, Priority, Date, Group)</label>
+                            <label><input type="checkbox" id="csv_description"> Description</label>
+                            <label><input type="checkbox" id="csv_assignee"> Assignee</label>
+                            <label><input type="checkbox" id="csv_email"> Email ID</label>
+                            <label><input type="checkbox" id="csv_subtasks"> Subtasks Count & Progress</label>
+                            <label><input type="checkbox" id="csv_attachments"> Attachments Count</label>
+                            <label><input type="checkbox" id="csv_comments"> Comments (text)</label>
+                            <label><input type="checkbox" id="csv_statusHistory"> Status Change History</label>
+                            <label><input type="checkbox" id="csv_priorityHistory"> Priority Change History</label>
+                            <label><input type="checkbox" id="csv_allHistory"> All History</label>
+                        </div>
+                        <div style="display:flex;gap:12px;justify-content:flex-end;margin-top:20px">
+                            <button class="btn btn-secondary" onclick="closeCSVExportDialog()">Cancel</button>
+                            <button class="btn btn-primary" onclick="doExportCSV()">Export CSV</button>
+                        </div>
+                    </div>
+                </div>`;
+            document.body.appendChild(dialog);
+        }
+
+        function csvSelectAllGroups(selectAll) {
+            document.querySelectorAll('.csv_group_checkbox').forEach(cb => cb.checked = selectAll);
+        }
+
+        function closeCSVExportDialog() {
+            document.getElementById('csvExportDialog')?.classList.remove('active');
+        }
+
+        async function doExportCSV() {
+            const g = id => document.getElementById(id)?.checked;
+            const headers = ['ID', 'Title', 'Status', 'Priority', 'Due Date', 'Group', 'Created'];
+            if (g('csv_description')) headers.push('Description');
+            if (g('csv_assignee')) headers.push('Assignee');
+            if (g('csv_email')) headers.push('Email ID');
+            if (g('csv_subtasks')) headers.push('Subtasks Total', 'Subtasks Done', 'Subtasks %');
+            if (g('csv_attachments')) headers.push('Attachments');
+            if (g('csv_comments')) headers.push('Comments');
+            if (g('csv_statusHistory')) headers.push('Status History');
+            if (g('csv_priorityHistory')) headers.push('Priority History');
+            if (g('csv_allHistory')) headers.push('All History');
+
+            // Get selected groups
+            const selectedGroups = Array.from(document.querySelectorAll('.csv_group_checkbox:checked'))
+                .map(cb => cb.value);
+
+            if (selectedGroups.length === 0) {
+                showAlert('No Groups Selected', 'Please select at least one group to export.');
+                return;
+            }
+
+            // Date range filter
+            const dateFrom = document.getElementById('csv_dateFrom')?.value;
+            const dateTo = document.getElementById('csv_dateTo')?.value;
+            const dateType = document.querySelector('input[name="csv_dateType"]:checked')?.value || 'created';
+
+            // Filter tasks by selected groups first
+            let filteredTasks = tasks.filter(t => selectedGroups.includes(t.group));
+
+            // Then filter by date range
+            filteredTasks = filteredTasks.filter(t => {
+                if (!dateFrom && !dateTo) return true; // No date filter
+
+                let taskDate;
+                if (dateType === 'created') {
+                    taskDate = new Date(t.created).toISOString().split('T')[0];
+                } else if (dateType === 'due') {
+                    taskDate = t.targetDate || '';
+                } else if (dateType === 'activity') {
+                    // Get last activity date
+                    const history = t.history || [];
+                    if (history.length > 0) {
+                        const lastActivity = Math.max(...history.map(h => h.ts || 0));
+                        taskDate = new Date(lastActivity).toISOString().split('T')[0];
+                    } else {
+                        taskDate = new Date(t.created).toISOString().split('T')[0];
+                    }
+                }
+
+                if (!taskDate) return false;
+                if (dateFrom && taskDate < dateFrom) return false;
+                if (dateTo && taskDate > dateTo) return false;
+                return true;
+            });
+
+            if (filteredTasks.length === 0) {
+                showAlert('No Tasks', 'No tasks match the selected filters.');
+                return;
+            }
+
+            const escapeCSV = (val) => {
+                if (val == null) return '';
+                const str = String(val);
+                if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+                    return '"' + str.replace(/"/g, '""') + '"';
+                }
+                return str;
+            };
+
+            const statusLabels = { 'todo': 'To Do', 'in-progress': 'In Progress', 'waiting': 'Waiting for Response', 'done': 'Done' };
+
+            const rows = await Promise.all(filteredTasks.map(async t => {
+                const history = t.history || [];
+                const subtasks = t.subtasks || [];
+                const subtasksDone = subtasks.filter(s => s.done).length;
+                const subtasksPct = subtasks.length > 0 ? Math.round(subtasksDone / subtasks.length * 100) : 0;
+
+                const row = [
+                    t.id,
+                    t.title,
+                    statusLabels[t.status] || t.status,
+                    t.priority,
+                    t.targetDate || '',
+                    t.group,
+                    new Date(t.created).toLocaleDateString()
+                ];
+
+                if (g('csv_description')) row.push(t.description || '');
+                if (g('csv_assignee')) row.push(t.assignee || '');
+                if (g('csv_email')) row.push(t.emailId || '');
+                if (g('csv_subtasks')) row.push(subtasks.length, subtasksDone, subtasksPct + '%');
+                if (g('csv_attachments')) {
+                    if (isDesktop()) {
+                        const atts = await pywebview.api.list_attachments(t.id);
+                        row.push(atts?.length || 0);
+                    } else {
+                        row.push('N/A');
+                    }
+                }
+                if (g('csv_comments')) {
+                    const comments = history.filter(h => h.type === 'comment').map(h => `${formatDateTime(h.ts)}: ${h.txt}`).join(' | ');
+                    row.push(comments);
+                }
+                if (g('csv_statusHistory')) {
+                    const status = history.filter(h => h.txt?.includes('Status')).map(h => `${formatDateTime(h.ts)}: ${h.txt}`).join(' | ');
+                    row.push(status);
+                }
+                if (g('csv_priorityHistory')) {
+                    const priority = history.filter(h => h.txt?.includes('Priority')).map(h => `${formatDateTime(h.ts)}: ${h.txt}`).join(' | ');
+                    row.push(priority);
+                }
+                if (g('csv_allHistory')) {
+                    const all = history.map(h => `${formatDateTime(h.ts)}: ${h.txt}`).join(' | ');
+                    row.push(all);
+                }
+
+                return row.map(escapeCSV).join(',');
+            }));
+
+            const csvContent = headers.join(',') + '\n' + rows.join('\n');
+
+            if (isDesktop()) {
+                const result = await pywebview.api.export_csv('kanban_export.csv');
+                if (result.success) {
+                    await pywebview.api.save_to_file(result.path, csvContent);
+                    showToast(`CSV exported: ${filteredTasks.length} tasks`);
+                }
+            } else {
+                const blob = new Blob([csvContent], { type: 'text/csv' });
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = 'kanban_export.csv';
+                a.click();
+                showToast(`CSV downloaded: ${filteredTasks.length} tasks`);
+            }
+            closeCSVExportDialog();
+        }
+
+        async function handleImport() {
+            if (isDesktop()) {
+                await doImportUnified();
+            } else {
+                // Browser mode - use hidden file input for JSON only
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = '.json';
+                input.onchange = (e) => {
+                    const file = e.target.files[0];
+                    if (!file) return;
+
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        processImportData(event.target.result);
+                    };
+                    reader.readAsText(file);
+                };
+                input.click();
+            }
+        }
+
+        async function doImportUnified() {
+            try {
+                // Show file picker for both ZIP and JSON
+                const fileResult = await pywebview.api.show_open_dialog([
+                    'Kanban Export (*.zip;*.json)',
+                    'ZIP Files (*.zip)',
+                    'JSON Files (*.json)',
+                    'All Files (*.*)'
+                ]);
+
+                if (!fileResult.success) return;
+
+                // Import using unified backend method
+                const importResult = await pywebview.api.import_data_unified(fileResult.path);
+
+                if (importResult.success) {
+                    const data = importResult.data;
+                    const importedTasks = (data.tasks || []).map(normalizeImportedTask);
+                    const importedGroups = data.groups || [...new Set(importedTasks.map(t => t.group || 'General'))];
+                    const importedLabels = data.labels || [];
+
+                    showImportOptionsDialog(importedTasks, importedGroups, importedLabels);
+
+                    if (importResult.attachmentsCount > 0) {
+                        showToast(`${importResult.attachmentsCount} attachments extracted`);
+                    } else {
+                        showToast(`File loaded successfully`);
+                    }
+                } else {
+                    showAlert('Import Failed', importResult.error || 'Invalid file format');
+                }
+            } catch (e) {
+                console.error('Import error:', e);
+                showAlert('Import Error', 'Failed to import: ' + e.message);
+            }
+        }
+
+        // Common import processing for both desktop and browser modes
+        function processImportData(content) {
+            try {
+                const rawData = JSON.parse(content);
+
+                // Handle both formats:
+                // 1. Kanban_V2 format: just an array of tasks
+                // 2. Desktop format: {tasks: [], groups: [], labels: []}
+                let importedTasks, importedGroups, importedLabels;
+
+                if (Array.isArray(rawData)) {
+                    // Kanban_V2 format - normalize tasks
+                    importedTasks = rawData.map(normalizeImportedTask);
+                    importedGroups = [...new Set(importedTasks.map(t => t.group || 'General'))];
+                    if (importedGroups.length === 0) importedGroups = ['General'];
+                    importedLabels = [];
+                } else if (rawData.tasks) {
+                    // Desktop format with tasks object
+                    importedTasks = (rawData.tasks || []).map(normalizeImportedTask);
+                    importedGroups = rawData.groups || [...new Set(importedTasks.map(t => t.group || 'General'))];
+                    if (importedGroups.length === 0) importedGroups = ['General'];
+                    importedLabels = rawData.labels || [];
+                } else {
+                    throw new Error('Unknown format');
+                }
+
+                // Show import options dialog
+                showImportOptionsDialog(importedTasks, importedGroups, importedLabels);
+            } catch (e) {
+                console.error('Import error:', e);
+                showAlert('Invalid File', 'The selected file is not a valid Kanban data file. Supported formats: Desktop JSON or Kanban_V2 export.');
+            }
+        }
+
+        function showImportOptionsDialog(importedTasks, importedGroups, importedLabels) {
+            const currentCount = tasks.length;
+            const importCount = importedTasks.length;
+
+            let message = `Found ${importCount} tasks to import.\n\n`;
+            if (currentCount > 0) {
+                message += `You currently have ${currentCount} tasks.\n\n`;
+                message += `🔄 MERGE: Add imported tasks to existing ones\n`;
+                message += `⚠️ OVERWRITE: Replace all current data\n\n`;
+                message += `Choose MERGE to keep your existing tasks, or OVERWRITE to replace everything.`;
+
+                // Use custom 3-button dialog approach
+                showImportChoiceDialog(importedTasks, importedGroups, importedLabels, currentCount, importCount);
+            } else {
+                // No existing tasks, just import
+                tasks = importedTasks;
+                groups = importedGroups.length > 0 ? importedGroups : ['General'];
+                labels = importedLabels;
+                saveData();
+                renderAll();
+                showToast(`Imported ${importCount} tasks successfully`);
+            }
+        }
+
+        function showImportChoiceDialog(importedTasks, importedGroups, importedLabels, currentCount, importCount) {
+            // Create custom import dialog
+            let dialog = document.getElementById('importChoiceDialog');
+            if (!dialog) {
+                dialog = document.createElement('div');
+                dialog.id = 'importChoiceDialog';
+                dialog.className = 'modal-overlay';
+                dialog.innerHTML = `
+            <div class="modal">
+                <div class="modal-header">
+                    <span>📥 Import Options</span>
+                    <span class="close-btn" onclick="closeImportDialog()">×</span>
+                </div>
+                <div class="modal-body" style="padding:24px">
+                    <p id="importDialogMessage" style="margin-bottom:20px;line-height:1.6"></p>
+                    <div style="display:flex;gap:12px;justify-content:flex-end">
+                        <button class="btn btn-secondary" onclick="closeImportDialog()">Cancel</button>
+                        <button class="btn btn-primary" onclick="doImportMerge()" style="background:var(--success)">🔄 Merge</button>
+                        <button class="btn btn-primary" onclick="doImportOverwrite()" style="background:var(--warning)">⚠️ Overwrite</button>
+                    </div>
+                </div>
+            </div>`;
+                document.body.appendChild(dialog);
+            }
+
+            // Store data for callbacks
+            window._importData = { importedTasks, importedGroups, importedLabels };
+
+            document.getElementById('importDialogMessage').innerHTML =
+                `Found <strong>${importCount}</strong> tasks to import.<br><br>` +
+                `You currently have <strong>${currentCount}</strong> tasks.<br><br>` +
+                `<strong>🔄 Merge:</strong> Add imported tasks to your existing ones (duplicates by ID will be skipped)<br>` +
+                `<strong>⚠️ Overwrite:</strong> Replace ALL current data with imported data`;
+            dialog.classList.add('active');
+        }
+
+        function closeImportDialog() {
+            document.getElementById('importChoiceDialog')?.classList.remove('active');
+        }
+
+        function doImportMerge() {
+            const { importedTasks, importedGroups, importedLabels } = window._importData;
+
+            // Merge tasks (skip duplicates by ID)
+            const existingIds = new Set(tasks.map(t => t.id));
+            let addedCount = 0;
+            importedTasks.forEach(t => {
+                if (!existingIds.has(t.id)) {
+                    tasks.push(t);
+                    addedCount++;
+                }
+            });
+
+            // Merge groups (add new ones)
+            importedGroups.forEach(g => {
+                if (!groups.includes(g)) groups.push(g);
+            });
+
+            // Merge labels (add new ones by ID)
+            const existingLabelIds = new Set(labels.map(l => l.id));
+            importedLabels.forEach(l => {
+                if (!existingLabelIds.has(l.id)) labels.push(l);
+            });
+
+            saveData();
+            renderAll();
+            closeImportDialog();
+            showToast(`Merged: ${addedCount} new tasks added, ${importedTasks.length - addedCount} duplicates skipped`);
+        }
+
+        function doImportOverwrite() {
+            const { importedTasks, importedGroups, importedLabels } = window._importData;
+
+            tasks = importedTasks;
+            groups = importedGroups.length > 0 ? importedGroups : ['General'];
+            labels = importedLabels;
+
+            saveData();
+            renderAll();
+            closeImportDialog();
+            showToast(`Overwritten: ${importedTasks.length} tasks imported`);
+        }
+        // Normalize task from any format to desktop format
+        function normalizeImportedTask(t) {
+            return {
+                id: (t.id || t._id || Date.now().toString(36) + Math.random().toString(36).substr(2)).toString(),
+                title: t.title || t.content || 'Untitled Task',
+                status: normalizeImportedStatus(t.status || t.colId || 'todo'),
+                priority: normalizeImportedPriority(t.priority || 'Medium'),
+                targetDate: t.targetDate || '',
+                assignee: t.assignee || t.assignedTo || '',
+                emailId: t.emailId || t.emailSubject || '',
+                description: t.description || '',
+                group: t.group || 'General',
+                created: t.created || Date.now(),
+                subtasks: t.subtasks || [],
+                labels: t.labels || [],
+                history: normalizeImportedHistory(t.history)
+            };
+        }
+
+        function normalizeImportedStatus(s) {
+            if (!s) return 'todo';
+            s = s.toString().toLowerCase();
+            if (s.includes('waiting')) return 'waiting';
+            if (s.includes('progress')) return 'in-progress';
+            if (s.includes('done')) return 'done';
+            return 'todo';
+        }
+
+        function normalizeImportedPriority(p) {
+            if (!p) return 'Medium';
+            p = p.toString().toLowerCase();
+            if (p.includes('high')) return 'High';
+            if (p.includes('low')) return 'Low';
+            return 'Medium';
+        }
+
+        function normalizeImportedHistory(h) {
+            if (!Array.isArray(h)) return [];
+            return h.map(item => {
+                if (item.ts && item.txt) return item;
+                let txt = '';
+                if (item.details) {
+                    if (typeof item.details === 'string') txt = item.details;
+                    else if (item.details.text) txt = item.details.text;
+                }
+                return {
+                    type: item.type || 'unknown',
+                    ts: item.timestamp || item.ts || Date.now(),
+                    txt: txt || item.txt || ''
+                };
+            });
+        }
+
+        // ============ CSV EXPORT ============
+        function getCSVFilteredTasks() {
+            const fromDate = document.getElementById('csvDateFrom').value;
+            const toDate = document.getElementById('csvDateTo').value;
+            const status = document.getElementById('csvStatus').value;
+
+            let filtered = [...tasks];
+
+            if (status !== 'all') {
+                filtered = filtered.filter(t => t.status === status);
+            }
+
+            if (fromDate || toDate) {
+                filtered = filtered.filter(t => {
+                    const created = new Date(t.created).toISOString().split('T')[0];
+                    if (fromDate && created < fromDate) return false;
+                    if (toDate && created > toDate) return false;
+                    return true;
+                });
+            }
+
+            return filtered;
+        }
+
+        function updateCSVCount() {
+            const count = getCSVFilteredTasks().length;
+            document.getElementById('csvCount').textContent = count;
+        }
+
+        // Add event listeners for CSV filters
+        document.getElementById('csvDateFrom')?.addEventListener('change', updateCSVCount);
+        document.getElementById('csvDateTo')?.addEventListener('change', updateCSVCount);
+        document.getElementById('csvStatus')?.addEventListener('change', updateCSVCount);
+
+        async function exportCSV() {
+            const filtered = getCSVFilteredTasks();
+
+            if (filtered.length === 0) {
+                showAlert('No Tasks', 'No tasks match the selected filters. Adjust your date range or status filter.');
+                return;
+            }
+
+            // Build CSV content
+            const headers = ['ID', 'Title', 'Status', 'Priority', 'Due Date', 'Assignee', 'Email ID', 'Group', 'Created', 'Description', 'Subtasks', 'Comments'];
+            const statusLabels = { 'todo': 'To Do', 'in-progress': 'In Progress', 'waiting': 'Waiting for Response', 'done': 'Done' };
+
+            const rows = filtered.map(t => {
+                const subtasks = (t.subtasks || []).map(s => `[${s.done ? 'x' : ' '}] ${s.text}`).join(' | ');
+                const comments = (t.history || []).filter(h => h.type === 'comment').map(h => h.txt).join(' | ');
+                const created = new Date(t.created).toLocaleDateString();
+
+                return [
+                    t.id,
+                    `"${(t.title || '').replace(/"/g, '""')}"`,
+                    statusLabels[t.status] || t.status,
+                    t.priority,
+                    t.targetDate || '',
+                    `"${(t.assignee || '').replace(/"/g, '""')}"`,
+                    `"${(t.emailId || '').replace(/"/g, '""')}"`,
+                    t.group,
+                    created,
+                    `"${(t.description || '').replace(/"/g, '""').replace(/\n/g, ' ')}"`,
+                    `"${subtasks.replace(/"/g, '""')}"`,
+                    `"${comments.replace(/"/g, '""').replace(/\n/g, ' ')}"`
+                ].join(',');
+            });
+
+            const csv = [headers.join(','), ...rows].join('\n');
+
+            if (isDesktop()) {
+                const result = await pywebview.api.export_csv(`kanban_report_${new Date().toISOString().split('T')[0]}.csv`);
+                if (result.success) {
+                    await pywebview.api.save_to_file(result.path, csv);
+                    showToast(`Exported ${filtered.length} tasks to CSV`);
+                    closeModal('csvExportModal');
+                }
+            } else {
+                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = `kanban_report_${new Date().toISOString().split('T')[0]}.csv`;
+                a.click();
+                showToast(`Exported ${filtered.length} tasks to CSV`);
+                closeModal('csvExportModal');
+            }
+        }
+
+        // ============ SETTINGS ============
+        function toggleTheme() {
+            settings.theme = settings.theme === 'dark' ? 'light' : 'dark';
+            if (isDesktop()) pywebview.api.set_setting('theme', settings.theme);
+            applyTheme();
+        }
+
+        function toggleSettingDarkMode() {
+            toggleTheme();
+        }
+
+        function toggleSetting(key) {
+            settings[key] = !settings[key];
+            if (isDesktop()) pywebview.api.set_setting(key, settings[key]);
+            document.getElementById(`toggle${key.charAt(0).toUpperCase() + key.slice(1)}`).classList.toggle('active', settings[key]);
+        }
+
+        function updateBackupInterval() {
+            settings.backupInterval = parseInt(document.getElementById('backupInterval').value);
+            if (isDesktop()) pywebview.api.set_setting('backupInterval', settings.backupInterval);
+        }
+
+        function updateBackupRetention() {
+            settings.backupRetention = parseInt(document.getElementById('backupRetention').value);
+            if (isDesktop()) pywebview.api.set_setting('backupRetention', settings.backupRetention);
+        }
+
+        function updateMaxBackups() {
+            settings.maxBackups = parseInt(document.getElementById('maxBackups').value);
+            if (isDesktop()) pywebview.api.set_setting('maxBackups', settings.maxBackups);
+        }
+
+        async function manualBackup() {
+            if (isDesktop()) {
+                const result = await pywebview.api.create_backup();
+                if (result.success) {
+                    showToast('Backup created: ' + result.file);
+                    loadBackups();
+                }
+            }
+        }
+
+        async function loadBackups() {
+            if (!isDesktop) return;
+            const backups = await pywebview.api.list_backups();
+            const container = document.getElementById('backupList');
+            if (backups.length === 0) {
+                container.innerHTML = '<div style="color:var(--text-muted);text-align:center;padding:16px">No backups</div>';
+                return;
+            }
+            container.innerHTML = backups.map(b => `
+                <div class="backup-item">
+                    <div class="backup-info">
+                        <div class="backup-name">${b.name}</div>
+                        <div class="backup-date">${new Date(b.date * 1000).toLocaleString()}</div>
+                    </div>
+                    <div class="backup-actions">
+                        <button class="btn btn-secondary" onclick="restoreBackup('${b.name}')">Restore</button>
+                        <button class="btn btn-secondary" onclick="deleteBackup('${b.name}')">🗑</button>
+                    </div>
+                </div>`).join('');
+        }
+
+        async function restoreBackup(name) {
+            showConfirm('Restore Backup', 'Restore this backup? Your current data will be backed up first.', async (confirmed) => {
+                if (confirmed) {
+                    const result = await pywebview.api.restore_backup(name);
+                    if (result.success) {
+                        const data = await pywebview.api.load_data();
+                        tasks = data.tasks || [];
+                        groups = data.groups || ['General'];
+                        renderAll();
+                        showToast('Backup restored');
+                    }
+                }
+            });
+        }
+
+        async function deleteBackup(name) {
+            showConfirm('Delete Backup', 'Are you sure you want to delete this backup?', async (confirmed) => {
+                if (confirmed) {
+                    await pywebview.api.delete_backup(name);
+                    loadBackups();
+                    showToast('Backup deleted');
+                }
+            });
+        }
+
+        // ============ STATS ============
+        function renderStats(groupFilter = 'All') {
+            const today = new Date().toISOString().split('T')[0];
+            const weekLater = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+            // Filter tasks based on group
+            const statsTasks = groupFilter === 'All' ? tasks : tasks.filter(t => t.group === groupFilter);
+
+            const total = statsTasks.length;
+            const archived = statsTasks.filter(t => t.archived).length;
+            const active = statsTasks.filter(t => !t.archived);
+            const done = active.filter(t => t.status === 'done').length;
+            const inProgress = active.filter(t => t.status === 'in-progress').length;
+            const waiting = active.filter(t => t.status === 'waiting').length;
+            const todo = active.filter(t => t.status === 'todo').length;
+
+            const overdue = active.filter(t => t.targetDate && t.targetDate < today && t.status !== 'done').length;
+            const dueToday = active.filter(t => t.targetDate === today && t.status !== 'done').length;
+            const dueWeek = active.filter(t => t.targetDate && t.targetDate > today && t.targetDate <= weekLater && t.status !== 'done').length;
+
+            const high = active.filter(t => t.priority === 'High' && t.status !== 'done').length;
+            const medium = active.filter(t => t.priority === 'Medium' && t.status !== 'done').length;
+            const low = active.filter(t => t.priority === 'Low' && t.status !== 'done').length;
+
+            const completionRate = active.length > 0 ? Math.round(done / active.length * 100) : 0;
+
+            // Group breakdown (only show if viewing All Groups, otherwise plain text or hidden)
+            let groupStats = '';
+            if (groupFilter === 'All') {
+                groupStats = groups.map(g => {
+                    const inGroup = active.filter(t => t.group === g);
+                    const groupDone = inGroup.filter(t => t.status === 'done').length;
+                    return `<div style="display:flex;justify-content:space-between;padding:4px 0"><span>${g}</span><span>${groupDone}/${inGroup.length}</span></div>`;
+                }).join('');
+            }
+
+            // Build Dropdown
+            const groupOptions = ['All', ...groups].map(g =>
+                `<option value="${g}" ${g === groupFilter ? 'selected' : ''}>${g === 'All' ? 'All Groups' : g}</option>`
+            ).join('');
+
+            document.getElementById('statsContent').innerHTML = `
+                <div style="margin-bottom:20px;display:flex;justify-content:space-between;align-items:center;padding-bottom:16px;border-bottom:1px solid var(--border)">
+                    <div style="font-weight:600;font-size:16px">Overall Statistics</div>
+                    <div style="display:flex;align-items:center;gap:12px">
+                        <label style="font-size:14px;color:var(--text-secondary)">Filter:</label>
+                        <select onchange="renderStats(this.value)" class="form-input" style="width:auto;min-width:150px;padding:6px">
+                            ${groupOptions}
+                        </select>
+                    </div>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card"><div class="stat-value">${total - archived}</div><div class="stat-label">Active Tasks</div></div>
+                    <div class="stat-card"><div class="stat-value" style="color:var(--success)">${done}</div><div class="stat-label">Completed</div></div>
+                    <div class="stat-card"><div class="stat-value" style="color:var(--warning)">${inProgress}</div><div class="stat-label">In Progress</div></div>
+                    <div class="stat-card"><div class="stat-value" style="color:var(--primary)">${todo}</div><div class="stat-label">To Do</div></div>
+                </div>
+                <div class="stats-grid" style="margin-top:16px">
+                    <div class="stat-card"><div class="stat-value" style="color:var(--danger)">${overdue}</div><div class="stat-label">⚠️ Overdue</div></div>
+                    <div class="stat-card"><div class="stat-value" style="color:#f59e0b">${dueToday}</div><div class="stat-label">📅 Due Today</div></div>
+                    <div class="stat-card"><div class="stat-value">${dueWeek}</div><div class="stat-label">📆 Due This Week</div></div>
+                    <div class="stat-card"><div class="stat-value" style="color:#6b7280">${archived}</div><div class="stat-label">📦 Archived</div></div>
+                </div>
+                <div style="margin-top:20px;padding:16px;background:var(--bg-tertiary);border-radius:8px">
+                    <div style="font-weight:600;margin-bottom:12px">Priority Breakdown</div>
+                    <div style="display:flex;gap:20px">
+                        <span style="color:var(--danger)">🔴 High: ${high}</span>
+                        <span style="color:var(--warning)">🟡 Medium: ${medium}</span>
+                        <span style="color:var(--success)">🟢 Low: ${low}</span>
+                    </div>
+                </div>
+                ${groupFilter === 'All' ? `
+                <div style="margin-top:20px;padding:16px;background:var(--bg-tertiary);border-radius:8px">
+                    <div style="font-weight:600;margin-bottom:12px">Groups Progress</div>
+                    ${groupStats}
+                </div>` : ''}
+                <div style="text-align:center;margin-top:20px;font-size:18px;font-weight:600">
+                    ${completionRate}% Completion Rate
+                </div>`;
+        }
+
+
+
+
+
+        // ============ UTILS ============
+        function openModal(id) {
+            document.getElementById(id).classList.add('active');
+            if (id === 'settingsModal') {
+                updateSettingsUI(); // Ensure settings dropdowns show saved values
+                loadBackups();
+            }
+            if (id === 'statsModal') renderStats();
+            if (id === 'newTaskModal') {
+                populateNewTaskGroupDropdown();
+                resetNewTaskModal();
+                document.getElementById('newTitle').focus();
+            }
+            if (id === 'csvExportModal') updateCSVCount();
+        }
+
+        function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+        function showToast(msg, isError = false) {
+            const t = document.getElementById('toast');
+            t.textContent = msg;
+            t.className = 'toast show' + (isError ? ' error' : '');
+            setTimeout(() => t.classList.remove('show'), 3000);
+        }
+
+        function escapeHtml(s) {
+            if (!s) return '';
+            return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        function timeAgo(ts) {
+            const s = Math.floor((Date.now() - ts) / 1000);
+            if (s < 60) return 'Just now';
+            if (s < 3600) return Math.floor(s / 60) + 'm ago';
+            if (s < 86400) return Math.floor(s / 3600) + 'h ago';
+            return Math.floor(s / 86400) + 'd ago';
+        }
+
+        function formatDateTime(ts) {
+            const d = new Date(ts);
+            const options = {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric',
+                hour: 'numeric',
+                minute: '2-digit',
+                hour12: true
+            };
+            return d.toLocaleString('en-US', options);
+        }
+
+        function handleSearch(q) { searchQuery = q.trim(); renderTaskList(); }
+
+        function setupKeyboardShortcuts() {
+            document.onkeydown = e => {
+                if (e.key === 'Escape') {
+                    const modal = document.querySelector('.modal-overlay.active');
+                    if (modal) modal.classList.remove('active');
+                    else if (selectedTaskId) { selectedTaskId = null; renderTaskList(); renderDetail(); }
+                }
+                if (e.ctrlKey && e.key === 'n') { e.preventDefault(); openModal('newTaskModal'); }
+            };
+        }
+
+        function openNewTaskModal() { openModal('newTaskModal'); }
+
+        function showAbout() {
+            let dialog = document.getElementById('aboutDialog');
+            if (!dialog) {
+                dialog = document.createElement('div');
+                dialog.id = 'aboutDialog';
+                dialog.className = 'modal-overlay';
+                dialog.innerHTML = `
+                    <div class="modal" style="max-width:500px">
+                        <div class="modal-header">
+                            <span>ℹ️ About Kanban Board</span>
+                            <span class="close-btn" onclick="document.getElementById('aboutDialog').classList.remove('active')">×</span>
+                        </div>
+                        <div class="modal-body" style="padding:24px;text-align:center">
+                            <div style="font-size:48px;margin-bottom:16px">📋</div>
+                            <h2 style="margin:0 0 8px;font-size:24px">Kanban Board Desktop</h2>
+                            <div style="color:var(--text-muted);margin-bottom:20px">Version 1.0</div>
+                            <div style="text-align:left;background:var(--bg-tertiary);padding:16px;border-radius:8px;margin-bottom:16px">
+                                <div style="font-weight:600;margin-bottom:8px">✨ Features</div>
+                                <ul style="margin:0;padding-left:20px;line-height:1.8">
+                                    <li>Smart Task Management (Kanban View)</li>
+                                    <li>Subtasks & Progress Tracking</li>
+                                    <li>File Attachments (Link/Copy Modes)</li>
+                                    <li>Backup Retention (7/30/60 Days)</li>
+                                    <li>Automated & Manual Backups</li>
+                                    <li>Import/Export (JSON, ZIP, CSV)</li>
+                                    <li>Activity History & Analytics</li>
+                                    <li>Dark/Light Themes</li>
+                                </ul>
+                            </div>
+                            <div style="text-align:left;background:var(--bg-tertiary);padding:16px;border-radius:8px;margin-bottom:16px">
+                                <div style="font-weight:600;margin-bottom:8px">⌨️ Keyboard Shortcuts</div>
+                                <div style="display:flex;justify-content:space-between;padding:4px 0"><span>Ctrl + N</span><span>New Task</span></div>
+                                <div style="display:flex;justify-content:space-between;padding:4px 0"><span>Ctrl + Shift + K</span><span>Show/Hide Window</span></div>
+                                <div style="display:flex;justify-content:space-between;padding:4px 0"><span>Escape</span><span>Close Modal/Deselect</span></div>
+                            </div>
+                            <div style="color:var(--text-muted);font-size:12px">
+                                Developed by <strong>Murali Krishna</strong><br>
+                                Built with ❤️ using Python & pywebview<br>
+                                © 2025 Kanban Desktop
+                            </div>
+                        </div>
+                    </div>`;
+                document.body.appendChild(dialog);
+            }
+            dialog.classList.add('active');
+        }
+
+        async function openExternalLink(url) {
+            if (isDesktop()) {
+                await pywebview.api.open_url(url);
+            } else {
+                window.open(url, '_blank');
+            }
+        }
+    </script>
+</body>
+
+</html>
